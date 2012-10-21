@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	xmlns:cfDataGrid="com.adobe.ColdFusion.components.datagrid.*"
+	xmlns:model="com.mvc.models.*"
+	xmlns:validation="com.adobe.ColdFusion.validation.*"
+	xmlns:customValidation="com.mvc.validation.*"
+	creationComplete="initComponent()"
+	explicitMaxHeight="{Application.application.height - 50}" 
+	title="Upload File"
+	showCloseButton="true"
+	close="this.dispatchEvent(new Event('change'));WindowManager.remove(this);"  height="262" width="470">
+
+  
+	<mx:Metadata>
+		[Event("change")]
+	</mx:Metadata> 
+     
+	<mx:Script>  
+		<![CDATA[
+		    import mx.core.SoundAsset;
+            import com.newmediateam.fileIO.MultiFileUpload;
+            import flash.media.Sound;
+            import flash.media.SoundChannel;   
+		 
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			import mx.core.Application;
+			import mx.validators.Validator;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.FaultEvent;
+			import com.mvc.models.*;
+			//add for file chooser by Bruce
+			import mx.managers.PopUpManager;
+			import mx.containers.TitleWindow;
+			import flash.net.URLRequest;
+			import flash.net.URLVariables;
+			import flash.geom.Point;
+			private var point1:Point = new Point();
+			private var file:FileReferenceList = new FileReferenceList();
+			//private var fileFilter:FileFilter = new FileFilter("Files(*.doc,*.docx,*.pdf,*.html,*.gif,*.jpg,*.jpeg,*.bmp)","*.doc;*.docx;*.pdf;*.html;*.gif;*.jpg;*.jpeg;*.bmp");
+			private var originalfiletype:Object;
+			private var _key:Object;
+			private var _aid:Object;//bruce
+			
+			//private var ctry:Object;
+			
+			//bruce add file upload test    
+            
+            public var multiFileUpload:MultiFileUpload;
+            
+        
+            [Embed(source="Ding.mp3")]
+            public var soundClass:Class;
+            public var snd:SoundAsset = new soundClass() as SoundAsset;
+            public var sndChannel:SoundChannel;
+            
+
+           public function uploadsfinished(event:Event):void{
+           
+           sndChannel=snd.play();
+           }
+			//file upload test end
+			
+			public function get key():Object
+			{
+				return this._key;
+			}
+
+			public function set key(key:Object):void
+			{
+				this._key = key;
+				getItem();
+			} 
+			
+			public function get aaid():Object
+			{
+				return this._aid;
+			}
+			
+			public function set aaid(aaid:Object):void
+			{
+				this._aid = aaid;
+				getItem();
+			} 
+			 
+			private function initComponent():void
+			{ 
+				getItem();
+				this.referenceManager.fileLookup();				
+            var postVariables:URLVariables = new URLVariables;
+             
+            postVariables.projectID = 55;
+            postVariables.user = User.getInstance().id.toString();
+            postVariables.aid = this.aaid.toString();
+            multiFileUpload = new MultiFileUpload(
+            	filesDG,
+            	browseBTN,   
+            	clearButton,  
+            	delButton,
+            	upload_btn,
+            	progressbar,
+            	"http://db1.elc.msu.edu/edtech/appmanage/bin/upload.cfm", 
+            	postVariables,
+            	5000000);
+            
+           multiFileUpload.addEventListener(Event.COMPLETE,uploadsfinished);
+			}
+
+
+			/**********************************************
+			 * Remote Server Calls and Call back handlers
+			 **********************************************/
+
+			// get an instance of the item from the server
+			public function getItem():void
+			{
+				
+				if( this._key != null )
+				{	
+					this.dataManager.getById(this._key);
+				} 
+  				else if( this._aid != null )
+				{	this.detailObject.aid=aaid.toString(); //test by bruce
+					this.dataManager.getById(this._aid);
+				}  
+				else
+				{	
+					// the key is null, so we'll create a new object for the 'add' operation. 
+					this.detailObject = new Edit_file();
+					//this.detailObject.sgrp = User.getInstance().sel_sg;
+				}
+			}
+			// save the edited object back on the server.
+			// and then throw a change event, so the master page
+			// can update itself accordingly
+			private function saveItem(item:Object):void
+			{				
+				// array of validators to check before form is submitted
+				var validators:Array = [];
+				validators[0] = this.v0;
+				validators[1] = this.v1;
+				var inValidResults:Array = Validator.validateAll(validators);
+				if( inValidResults.length == 0 )
+				{
+					this.dataManager.save(item);
+				}
+			}
+
+			private function server_fault(event:FaultEvent):void
+			{
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function get_result(event:ResultEvent):void
+			{
+				var detail:Edit_file = event.result as Edit_file;
+				originalfiletype = detail.typeid;
+				this.detailObject = detail;
+								
+			}
+
+			private function save_result(event:ResultEvent):void
+			{
+				this.dispatchEvent( new Event("change") );
+				WindowManager.remove(this);
+			}
+ 
+			private function fileLookup_result(event:ResultEvent):void
+			{
+				this.typeid.dataProvider = event.result;
+				this.typeid.selectedItem = originalfiletype;
+			} 
+			
+			//add for file chooser by Bruce
+		//	private function showWindow():void{
+				//file.browse([fileFilter]);
+				//file.addEventListener(Event.SELECT,onFileSelect);
+			//}
+			
+			private function onFileSelect(event:Event):void{
+				for(var i:int=0;i<file.fileList.length;i++){
+					var f:FileReference = FileReference(file.fileList[i]);
+					path.text=f.name;
+					
+				}
+			}
+		]]>
+	</mx:Script>
+ 
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_file.fileGateway">
+		<mx:method name="getById" result="get_result(event)" fault="server_fault(event)" />
+		<mx:method name="getByAid" result="get_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+ 
+ 	<mx:RemoteObject
+		id="referenceManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_file.fileResources">
+		<mx:method name="fileLookup" result="fileLookup_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+	
+<!-- create a model, using the AS Value Object class. With this mxml version of the model we can bind the form fields back to the object. --> 
+	<model:Edit_file id="detailObject">
+		<model:aid>{Number(aid.text)}</model:aid>
+		<model:path>{path.text as String}</model:path>
+		<model:name>{Name.text as String}</model:name>
+		<model:typeid>{Number(typeid.selectedItem.id)}</model:typeid>
+	</model:Edit_file>
+	<mx:Validator id="v0" source="{this.path}" property="text" required="true" />
+	<mx:Validator id="v1" source="{this.Name}" property="text" required="true" />
+	<mx:Panel  width="427" height="208" layout="absolute" title="File Upload Control">
+	     
+	    <mx:DataGrid id="filesDG" left="0" right="10" bottom="30" top="5"/>
+	    <mx:ProgressBar id="progressbar" labelPlacement="center" trackHeight="15" left="0" right="0" bottom="5" height="20"/>
+	<mx:ControlBar>
+	    <mx:Spacer width="100%"/>
+	        <mx:HBox>
+	            <mx:Button label="Browse For Files" id="browseBTN"/>
+	            <mx:Button label="Upload" id="upload_btn"/>
+	            <mx:Button label="Remove" id="delButton"/>
+	            <mx:Button label="Clear All" id="clearButton"/>
+	        </mx:HBox>
+	    </mx:ControlBar>
+	</mx:Panel>
+	<mx:Form visible="false" width="0%" height="0%"> 
+		<mx:FormItem width="100%" label="Application#" required="true">
+			<cfComponents:TextInputMask
+				 id="aid"
+				 text="{aaid.toString()}" 
+				/>
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Path" required="true">
+			<mx:HBox width="247">
+				<cfComponents:TextInputMask
+					 id="path"
+					  editable="true" enabled="true"/>
+			</mx:HBox>
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Name" required="true">
+			<cfComponents:TextInputMask
+				 id="Name"
+				 />
+		</mx:FormItem>
+		<mx:FormItem label="File Type">
+			<cfComponents:BindableComboBox
+				 id="typeid"				 
+				 valueField="filetype"
+				 labelFields="[filetype]"
+				 width="211"
+				 selectedItem=""
+				 />
+		</mx:FormItem>
+	</mx:Form>
+</cfComponents:SizeableTitleWindow>

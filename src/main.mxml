@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns="*" borderSkin="com.mvc.controllers.imagePositioning"
+	backgroundImage="@Embed(source='images/edtechLogo.png')" backgroundSize="auto" backgroundAttachment="fixed"
+	xmlns:controllers="com.mvc.controllers.*"
+	layout="absolute"
+	currentState="login">
+	<mx:Style source="application.css" />
+	<mx:Style>
+		Application {
+			backgroundPosition: left,bottom;
+			backgroundColor: #4898D3;
+		}
+	</mx:Style>
+
+	<mx:states>
+		<mx:State name="login">
+			<mx:AddChild position="lastChild">
+				<mx:VBox width="100%" height="100%" horizontalAlign="center" verticalAlign="middle" >
+					<controllers:Login
+							id="loginController"
+							width="500" height="400"
+							loginSuccessful="this.currentState='mainApplication';" />
+					</mx:VBox>
+			</mx:AddChild>
+		</mx:State>
+		<mx:State name="mainApplication">
+			<mx:AddChild position="lastChild">
+				<controllers:windowedApplication top="0" left="0" right="0" bottom="0"/>
+			</mx:AddChild>
+		</mx:State>
+	</mx:states>
+</mx:Application>

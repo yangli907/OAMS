@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" creationComplete="initApp()">
+
+	<mx:Metadata>
+		[Event("flashPaperLoaded")]
+		[Event("flashPaperLoading")]
+	</mx:Metadata>
+	<mx:Script>
+		<![CDATA[
+			import mx.events.ResizeEvent;
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			
+			[Bindable]
+			public var _wrapperUrl:String;
+			[Bindable]
+			public var _reportUrl:String;
+			[Bindable]
+			// unique id for this localConnection instance
+			public var instanceid:int = 0;
+			
+			private var wrapper_loader:Loader;
+			private var localConnection:LocalConnection;
+			
+
+			
+			private function initApp():void
+			{
+				
+				localConnection = new LocalConnection();
+	            localConnection.client = this;		
+	            try
+	            {
+	            	localConnection.connect("AS3FlashPaperLoader"+this.instanceid);
+	            }catch( ex:Error )
+	            {
+	            	// already connected.
+	            }		
+
+			}
+	
+			[Bindable]
+			public function get wrapperUrl():String
+			{
+				return this._wrapperUrl;
+			}
+			
+			public function set wrapperUrl(s:String):void
+			{
+				this._wrapperUrl = s;
+			}
+					
+			public function get reportUrl():String
+			{
+				return this._wrapperUrl;
+			}
+			
+			public function set reportUrl(s:String):void
+			{
+				this._reportUrl = s;
+			}		
+			
+	       
+	        
+	        public function wrapperReady():void
+	        {
+	        	localConnection.send("AS1FlashPaperLoader"+this.instanceid, "setSource", this._reportUrl);
+	        	this.dispatchEvent(new Event("flashPaperLoading") );
+	        }
+	        
+	        public function FlashPaperComplete(id:Object):void
+	        {
+	        	this.dispatchEvent(new Event("flashPaperLoaded") );
+	        }
+			
+			public function resize(w:int,h:int):void
+			{
+				localConnection.send("AS1FlashPaperLoader"+this.instanceid, "setFlashPaperSize", w,h);
+			}			        
+	        
+			
+		]]>
+	</mx:Script>
+	
+	<mx:SWFLoader 
+		scaleContent="false" 
+		id="fp" 
+		source="{this.wrapperUrl +'?instanceid=' +this.instanceid}" 
+		width="100%" height="100%"  />	
+</mx:Canvas>

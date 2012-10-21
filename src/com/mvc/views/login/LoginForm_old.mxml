@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Form xmlns:mx="http://www.adobe.com/2006/mxml"  xmlns="*" width="100%" height="100%" creationComplete="initApp()">
+   
+    <mx:Metadata>
+       [Event("forgotpassword")] 
+       [Event("loginSuccessful")] 
+    </mx:Metadata>
+    
+    <mx:Script>
+        <![CDATA[
+        	import mx.events.ValidationResultEvent;
+            import mx.rpc.events.ResultEvent;
+            import mx.rpc.events.FaultEvent;
+            import mx.utils.ObjectUtil;
+            import mx.controls.Alert;
+
+            
+			private var lso:SharedObject;
+            
+            private function initApp():void
+            {
+            	this.lso = SharedObject.getLocal("auth");
+
+				if( this.lso.data['email'] != null )
+				{
+            		this.email.text = this.lso.data['email'];
+            		this.rememberLogin.selected = true;
+    			}
+            	if( this.lso.data['password'] != null )
+				{
+            		this.password.text = this.lso.data['password'];
+            		this.rememberLogin.selected = true;
+    			}
+            }
+            
+            private function isValid():Boolean
+            {
+            	var emailValidResult:ValidationResultEvent = this.emailValidate.validate(this.email.text);
+            	var pswdValidResult:ValidationResultEvent = this.pswdValidate.validate(this.password.text);
+            	
+            	if (emailValidResult.type==ValidationResultEvent.VALID 
+            			&& pswdValidResult.type==ValidationResultEvent.VALID) 
+            	{
+            		return true;	
+            	}
+            	else
+            	{
+            		return false;	
+            	}
+            	
+            }                        
+            
+            
+            private function authenticateUser():void
+            {
+				if( isValid() )
+           		{
+                	authManager.login( this.email.text, this.password.text );   
+             	}
+            } 
+            
+            private function errorMessage(msg:String):void
+            {
+                //Alert.show( ObjectUtil.toString(event.message) );
+                this.errorMsg.text = msg;
+                this.errorMsg.height = 15;
+                this.errorMsg.visible = true;
+            }    
+   
+            private function serverFault(event:FaultEvent):void
+            {
+                errorMessage(event.message['message']);
+            }   
+            
+                  
+            
+            private function login_result(event:ResultEvent):void
+            {
+            	// login successful, remember the user.
+            	if( event.result == "true" || event.result == "TRUE" || event.result == "1" || event.result == 1 )
+            	{
+	            	if( this.rememberLogin.selected )
+	            	{
+		            	this.lso.data['email'] = this.email.text;
+		            	this.lso.data['password'] = this.password.text;	
+	            	}
+	            	else
+	            	{
+		            	this.lso.data['email'] = null;
+		            	this.lso.data['password'] = null;		
+	            	}
+	            	            	
+				    this.dispatchEvent( new Event('loginSuccessful') );
+            	}
+            	else
+            	{
+            		// login didn't work. show message
+            		errorMessage("Login unsuccessful");	
+            	}
+            }
+        ]]>
+    </mx:Script>
+    
+    <mx:RemoteObject 
+        id="authManager" 
+        destination="ColdFusion" 
+        source="framework.cfcs.mvc.managers.Auth" 
+        showBusyCursor="true">
+       <mx:method name="login" result="login_result(event)" fault="serverFault(event)" />
+    </mx:RemoteObject>    
+	
+
+    <mx:EmailValidator 
+    	id="emailValidate" 
+    	source="{this.email}" 
+    	property="text" 
+    	required="true" />
+    <mx:StringValidator 
+    	id="pswdValidate" 
+    	source="{this.password}" 
+    	property="text" 
+    	required="true" />
+    
+
+
+    <mx:Text width="100%" height="50" 
+    	text="Instructions: Lorem ipsum dolor sit amet, consectetuer adipiscing elit. " />
+    
+    <mx:Text id="errorMsg" visible="true" 
+        color="red" width="100%" height="0" />
+
+    
+    <mx:FormItem width="100%" label="Email" required="true">
+        <mx:TextInput id="email" 
+            width="175"/>
+    </mx:FormItem>
+    <mx:FormItem width="100%" label="Password" required="true">
+        <mx:TextInput id="password" 
+        	displayAsPassword="true"  
+            width="175"/>
+    </mx:FormItem>
+    <mx:FormItem>
+    	<mx:CheckBox id="rememberLogin" 
+    		label="Remember Login"
+    		selected="false" />
+    </mx:FormItem>
+    
+    <mx:VBox width="100%" horizontalAlign="right">
+        <mx:Button label="Login" click="authenticateUser();"/> 
+        <mx:LinkButton label="Forgot Password?" 
+            click="this.dispatchEvent(new Event('forgotpassword'));"
+            fontStyle="italic" width="150"  textAlign="right"/>
+    </mx:VBox>    
+    
+</mx:Form>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="vertical" creationComplete="init();" alpha="1" themeColor="haloGreen" backgroundGradientAlphas="[0.9, 0.96]" viewSourceURL="srcview/index.html" backgroundGradientColors="[#000000, #70828f]">
+    
+    <mx:Script>
+        <![CDATA[
+        	
+        	import mx.core.SoundAsset;
+        	import mx.controls.Alert;
+            import com.newmediateam.fileIO.MultiFileUpload;
+            import flash.media.Sound;
+            import flash.media.SoundChannel;
+            import mx.controls.Button;
+           
+           
+            
+            public var multiFileUpload:MultiFileUpload;
+            
+        
+            [Embed(source="Ding.mp3")]
+            public var soundClass:Class;
+            public var snd:SoundAsset = new soundClass() as SoundAsset;
+            public var sndChannel:SoundChannel;
+            
+            
+            public function init():void{
+            
+            var postVariables:URLVariables = new URLVariables;
+            postVariables.projectID = 55;
+            postVariables.test ="Hello World russ";    
+                
+            multiFileUpload = new MultiFileUpload(
+            	filesDG,
+            	browseBTN,
+            	clearButton,
+            	delButton,
+            	upload_btn,
+            	progressbar,
+            	"upload.cfm",
+            	postVariables,
+            	350000);
+            
+           multiFileUpload.addEventListener(Event.COMPLETE,uploadsfinished);
+          
+           }
+           public function uploadsfinished(event:Event):void{
+           
+           sndChannel=snd.play();
+           }
+            
+        ]]>
+    </mx:Script>
+    
+    <mx:Style>
+            Panel { 
+               roundedBottomCorners: true;
+               borderAlpha: 1;
+               highlightAlphas: 0.79, 0;
+               borderStyle: solid;
+               headerColors: #e7e7e7, #cccccc;
+               footerColors: #e7e7e7, #c7c7c7;
+               borderColor: #666666;
+               titleStyleName: "myTitleStyle";
+            } 
+
+        .myTitleStyle {
+           color: #000000;
+           font-weight: bold;
+           }
+    </mx:Style>
+ <mx:Canvas width="100%" height="100" >
+      	 <mx:SWFLoader source="nmtlogo.swf" left="10" top="10"/>
+</mx:Canvas>  
+<mx:Label text="Welcome" fontSize="18" color="#FFFFFF" fontWeight="bold" width="652"/>
+    <mx:Panel  width="652" height="330" layout="absolute" title="File Upload Control">
+     
+        <mx:DataGrid id="filesDG" left="0" right="0" bottom="30" top="5"/>
+        <mx:ProgressBar id="progressbar" labelPlacement="center" trackHeight="15" left="0" right="0" bottom="5" height="20"/>
+    <mx:ControlBar>
+        <mx:Spacer width="100%"/>
+            <mx:HBox>
+                <mx:Button label="Browse For Files" id="browseBTN"/>
+                <mx:Button label="Upload" id="upload_btn"/>
+                <mx:Button label="Remove" id="delButton"/>
+                <mx:Button label="Clear All" id="clearButton"/>
+            </mx:HBox>
+        </mx:ControlBar>
+    </mx:Panel>
+ <mx:Text text="Copyright 2006 New Media Inc." color="#c0c0c0" fontWeight="bold"/>
+    <mx:Text text="Disclaimer: This is only a prototype example of a Custom File Upload Class. Use at your own risk." width="450" textAlign="center" color="#c0c0c0"/>
+</mx:Application>

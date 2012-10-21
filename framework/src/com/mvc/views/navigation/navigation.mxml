@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*" creationComplete="initComponent()">
+
+    <mx:Metadata>
+       [Event("loginSuccessful")]
+    </mx:Metadata>
+    
+	<mx:Script>
+		<![CDATA[
+			import com.mvc.views.master.Users;
+			import com.mvc.views.master.SGroups;
+			import com.mvc.views.master.Groups;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.containers.ApplicationControlBar;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.events.MenuEvent;
+			import mx.core.UIComponent;
+			import mx.collections.ArrayCollection;
+			
+			private var lso:SharedObject = SharedObject.getLocal("framework-auth");
+
+			private function initComponent():void
+			{
+			}
+
+			private function getUsers():UIComponent
+			{
+				var view:Users = new Users();
+				return view;
+			}
+
+			private function getGroups():UIComponent
+			{
+				var view:Groups = new Groups();
+				return view;
+			}
+
+			private function getSGroups():UIComponent
+			{
+				var view:SGroups = new SGroups();
+				return view;
+			}
+			
+			private function getInfo():void
+			{
+				Alert.show(ObjectUtil.toString(User.getInstance()));
+			}
+			
+			private function fwLogout():void
+			{
+				lso.flush();
+				navigateToURL(new URLRequest('main.html'), '_self');
+			}
+
+		]]>
+	</mx:Script>
+
+	<mx:LinkButton paddingTop="2" includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}"
+		id="UsersBtn" label="Users" click="WindowManager.add(getUsers(), this, false);" />
+	<mx:LinkButton paddingTop="2" includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}"
+		id="GroupsBtn" label="Groups" click="WindowManager.add(getGroups(), this, false);" />
+	<mx:LinkButton paddingTop="2" includeInLayout="{User.getInstance().sgadmin}" visible="{User.getInstance().sgadmin}"
+		id="SGroupsBtn" label="SGroups" click="WindowManager.add(getSGroups(), this, false);"/>
+	<mx:LinkButton paddingTop="2" id="logout" label="Logout" click="fwLogout();" />
+	<mx:Spacer />
+	<mx:Text width="100%" paddingTop="2" textAlign="right" text="v0.001" />
+
+</mx:HBox>

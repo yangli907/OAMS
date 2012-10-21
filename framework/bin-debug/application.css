@@ -1,0 +1,36 @@
+TitleWindow { 
+   corner-radius: 4;
+   header-height: 24;
+   border-alpha: 1;
+   border-color: #ffffff;   
+   highlight-alphas: 0.7, 0.15;
+   header-colors: #c2ccd2, #c2ccd2;
+   footer-colors: #ffffff, #c2ccd2;
+   color: #333333;
+   rounded-bottom-corners: true;
+   paddingTop: 10;
+   paddingBottom: 10;
+   paddingRight: 10;
+   paddingLeft: 10;
+   
+} 
+
+Panel { 
+   border-alpha: .5;
+   border-color: #ffffff;
+} 
+
+ApplicationControlBar {
+   highlightAlphas: 0.8, 0.30;
+   fillAlphas: 0.80, 0.8;
+   fillColors: #c2ccd2, #c2ccd2;
+}
+
+LinkButton {
+   cornerRadius: 8;
+   rollOverColor: #68808c;
+   selectionColor: #68808c;
+   color: #333333;
+   textRollOverColor: #ffffff;
+   textSelectedColor: #ffffff;
+}

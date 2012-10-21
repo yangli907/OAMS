@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*" creationComplete="initComponent()">
+
+    <mx:Metadata>
+       [Event("loginSuccessful")]
+    </mx:Metadata>
+    
+	<mx:Script>
+		<![CDATA[ 
+			import com.mvc.views.master.Users;
+			import com.mvc.views.master.SGroups;
+			import com.mvc.views.master.Groups;
+			import com.mvc.views.master.Mail;
+			import com.mvc.views.master.Stuinfo;
+			import com.mvc.views.master.Phone;
+			import com.mvc.views.master.Address;
+			import com.mvc.views.master.Application;
+			import com.mvc.views.master.Decision;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.containers.ApplicationControlBar;
+			import mx.controls.Alert;
+			import mx.utils.ObjectUtil;
+			import mx.events.MenuEvent; 
+			import mx.core.UIComponent;
+			import mx.collections.ArrayCollection;
+			import mx.formatters.DateFormatter;
+			import flash.utils.Timer;
+			import flash.events.TimerEvent;
+			private var lso:SharedObject = SharedObject.getLocal("framework-auth");
+
+			private function initComponent():void
+			{
+				var timer:Timer = new Timer(1000);
+				timer.addEventListener(TimerEvent.TIMER, this.resetNow);
+				timer.start();
+			}
+			
+			private function resetNow(event:TimerEvent):void{
+				var dataFormatter:DateFormatter = new DateFormatter();
+				dataFormatter.formatString = "JJ:NN MM/DD/YYYY";
+				//var time:String = new Date().toLocaleTimeString();
+				var date:String = dataFormatter.format(new Date());
+				this.date.text = date;
+				//this.clock.text = time;
+			}
+
+			private function getUsers():UIComponent
+			{
+				var view:Users = new Users();
+				return view;
+			}
+
+			private function getGroups():UIComponent
+			{
+				var view:Groups = new Groups();
+				return view;
+			}
+
+			private function getSGroups():UIComponent
+			{
+				var view:SGroups = new SGroups();
+				return view;
+			}
+			
+			//---------------
+			//Bruce add new feature for test
+			private function getMail():UIComponent
+			{
+				var view:Mail = new Mail();
+				return view;
+			}
+			
+			private function getStuinfo():UIComponent
+			{
+				var view:Stuinfo = new Stuinfo();
+				return view;
+			}
+			private function getPhone():UIComponent
+			{
+				var view:Phone = new Phone();
+				return view;
+			}
+			private function getAddress():UIComponent
+			{
+				var view:Address = new Address();
+				return view;
+			}
+			private function getApplication():UIComponent
+			{
+				var view:Application = new Application();
+				return view;
+			}
+			private function getDecision():UIComponent
+			{
+				var view:Decision = new Decision();
+				return view;
+			}
+			//---------------
+			
+			private function getInfo():void
+			{
+				Alert.show(ObjectUtil.toString(User.getInstance()));
+			}
+			
+			private function fwLogout():void
+			{
+				lso.flush();
+				navigateToURL(new URLRequest('main.html'), '_self');
+			}
+
+			public function sendEmail():void{
+				var u:URLRequest = new URLRequest(
+				"mailto:" + "linglangtech@gmail.com"
+				+"?subject=Please leave your feed back of OAMS"
+				+"&body=Please leave any suggestion or problem regarding application management system, thanks!");
+				navigateToURL(u,"_self"); 
+			}
+		]]>
+	</mx:Script>
+	<mx:LinkButton paddingTop="2" includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}"
+		id="UsersBtn" label="Users" click="WindowManager.add(getUsers(), this, false);" />
+<!--	<mx:LinkButton paddingTop="2" includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}"
+		id="GroupsBtn" label="Groups" click="WindowManager.add(getGroups(), this, false);" />
+	<mx:LinkButton paddingTop="2" includeInLayout="{User.getInstance().sgadmin}" visible="{User.getInstance().sgadmin}"
+		id="SGroupsBtn" label="SGroups" click="WindowManager.add(getSGroups(), this, false);"/>-->
+	<mx:LinkButton paddingTop="2" id="stuinfo" label="Stuinfo" click="WindowManager.add(getStuinfo(), this, false);" />
+	<mx:LinkButton paddingTop="2" id="application" label="Application" click="WindowManager.add(getApplication(), this, false);" />
+	<mx:LinkButton paddingTop="2" id="address" label="Address" click="WindowManager.add(getAddress(), this, false);" />
+	<mx:LinkButton paddingTop="2" id="decision" label="Decision" includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}" click="WindowManager.add(getDecision(), this, false);" />
+	<mx:LinkButton paddingTop="2" id="logout" label="Logout" click="fwLogout();" />
+	<mx:Spacer />
+	<!--<mx:Text width="100%" paddingTop="2" textAlign="right" text="{User.getInstance().last.toString()} {User.getInstance().first.toString()}" />-->
+<!--	<mx:Text width="100%" id="clock" creationComplete="this.initComponent()" paddingTop="2" textAlign="right" text="v0.001" />
+-->	<mx:Text width="100%" id="date" creationComplete="this.initComponent()" paddingTop="2" textAlign="right" text="v0.001" />
+	<mx:LinkButton paddingTop="2" textAlign="right" id="feedback" label="Feedback" click="sendEmail()" />
+</mx:HBox>

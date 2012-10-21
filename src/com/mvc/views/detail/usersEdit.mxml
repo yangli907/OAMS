@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	xmlns:cfDataGrid="com.adobe.ColdFusion.components.datagrid.*"
+	xmlns:model="com.mvc.models.*"
+	xmlns:validation="com.adobe.ColdFusion.validation.*"
+	xmlns:customValidation="com.mvc.validation.*"
+	creationComplete="initComponent()"
+	explicitMaxHeight="{Application.application.height - 50}" 
+	title="Edit - Users"
+	showCloseButton="true"
+	close="WindowManager.remove(this);" >
+
+
+	<mx:Metadata>
+		[Event("change")]
+	</mx:Metadata>
+
+	<mx:Script>
+		<![CDATA[
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			import mx.core.Application;
+			import mx.validators.Validator;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.FaultEvent;
+			import com.mvc.models.*;
+
+			private var _key:Object;
+
+			private var originalusers_dept:Object;
+
+			private var originalusers_grp:Object;
+
+			public function get key():Object
+			{
+				return this._key;
+			}
+
+			public function set key(key:Object):void
+			{
+				this._key = key;
+				getItem();
+			}
+
+			private function initComponent():void
+			{
+				getItem();
+				this.referenceManager.grpLookup(User.getInstance().sel_sg);
+			}
+
+
+
+
+			/**********************************************
+			 * Remote Server Calls and Call back handlers
+			 **********************************************/
+
+			// get an instance of the item from the server
+			public function getItem():void
+			{
+				if( this._key != null )
+				{
+					this.dataManager.getById(this._key);
+				}
+				else
+				{
+					// the key is null, so we'll create a new object for the 'add' operation. 
+					this.detailObject = new Edit_users();
+					//this.detailObject.sgrp = User.getInstance().sel_sg;
+				}
+			}
+
+			// save the edited object back on the server.
+			// and then throw a change event, so the master page
+			// can update itself accordingly
+			private function saveItem(item:Object):void
+			{
+				// array of validators to check before form is submitted
+				var validators:Array = [];
+				validators[0] = this.v0;
+				validators[1] = this.v1;
+				validators[2] = this.v2;
+				validators[3] = this.v3;
+				validators[4] = this.v4;
+				validators[5] = this.v5;
+
+				var inValidResults:Array = Validator.validateAll(validators);
+
+				if( inValidResults.length == 0 )
+				{
+					this.dataManager.save(item);
+				}
+			}
+
+			private function server_fault(event:FaultEvent):void
+			{
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function get_result(event:ResultEvent):void
+			{
+				var detail:Edit_users = event.result as Edit_users;
+				
+				originalusers_grp = detail.grp;
+
+				this.detailObject = detail;
+			}
+
+			private function save_result(event:ResultEvent):void
+			{
+				this.dispatchEvent( new Event("change") );
+				WindowManager.remove(this);
+			}
+
+			private function users_grpLookup_result(event:ResultEvent):void
+			{
+				this.users_grp.dataProvider = event.result;
+				this.users_grp.selectedItem = originalusers_grp;
+			}
+
+		]]>
+	</mx:Script>
+
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_users.usersGateway">
+		<mx:method name="getById" result="get_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+
+	<mx:RemoteObject
+		id="referenceManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_users.usersResources">
+		<mx:method name="grpLookup" result="users_grpLookup_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+
+<!-- create a model, using the AS Value Object class. With this mxml version of the model we can bind the form fields back to the object. --> 
+	<model:Edit_users id="detailObject">
+		<model:first>{users_first.text as String}</model:first>
+		<model:last>{users_last.text as String}</model:last>
+		<model:email>{users_email.text as String}</model:email>
+		<model:phone>{users_phone.text as String}</model:phone>
+		<model:loc>{users_loc.text as String}</model:loc>
+		<model:grp>{Number(users_grp.selectedItem.id)}</model:grp>
+		<model:pass>{users_pass.text as String}</model:pass>
+		<model:admin>{users_admin.selected?1:0}</model:admin>
+		<model:sgadmin>{grp_admin.selected?1:0}</model:sgadmin>
+	</model:Edit_users>
+	<mx:Validator id="v0" source="{this.users_first}" property="text" required="true" />
+	<mx:Validator id="v1" source="{this.users_last}" property="text" required="true" />
+	<validation:EmailValidator id="v2" source="{this.users_email}" required="true" property="text" />
+	<mx:Validator id="v3" source="{this.users_grp}" property="selectedItem" required="{!this.users_admin.selected}" />
+	<mx:Validator id="v4" source="{this.users_pass}" property="text" required="true" />
+	<mx:Validator id="v5" source="{this.users_admin}" property="selected" required="true" />
+	<mx:Form width="100%" height="100%">
+		<mx:FormItem width="100%" label="First" required="true">
+			<cfComponents:TextInputMask
+				 id="users_first"
+				 text="{this.detailObject.first}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Last" required="true">
+			<cfComponents:TextInputMask
+				 id="users_last"
+				 text="{this.detailObject.last}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Email" required="true">
+			<cfComponents:TextInputMask
+				 id="users_email"
+				 text="{this.detailObject.email}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem label="Pass" required="true" width="350">
+			<cfComponents:TextInputMask
+				 id="users_pass"
+				 displayAsPassword="true"
+				 text="{this.detailObject.pass}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Phone">
+			<cfComponents:TextInputMask
+				 id="users_phone"
+				 text="{this.detailObject.phone}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Loc">
+			<cfComponents:TextInputMask
+				 id="users_loc"
+				 text="{this.detailObject.loc}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+			<mx:HBox width="100%">
+				<mx:FormItem width="166" label="          Grp    " required="{!this.users_admin.selected}">
+					<cfComponents:BindableComboBox
+						 id="users_grp"
+						 selectedItem="{this.detailObject.grp}"
+						 valueField="id"
+						 labelFields="[name]"
+						 width="80"
+						 />
+				</mx:FormItem>
+				<mx:Label text="Admin"/>
+				<mx:CheckBox id="grp_admin" selected="{(this.detailObject.sgadmin == 1)?true:false}"/>
+			</mx:HBox>
+		<mx:FormItem width="228" label="Sys Admin" 
+				 visible="{User.getInstance().admin}"
+				 includeInLayout="{User.getInstance().admin}">
+			<mx:CheckBox
+				 id="users_admin"
+				 selected="{(this.detailObject.admin == 1)?true:false}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+
+	</mx:Form>
+
+	<mx:ControlBar horizontalAlign="right" width="100%">
+		<mx:Button id="saveBtn" label="Save" click="saveItem(this.detailObject)" />
+		<mx:Button id="cancelBtn" label="Cancel" click="WindowManager.remove(this);" />
+	</mx:ControlBar>
+
+
+</cfComponents:SizeableTitleWindow>

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	xmlns:cfDataGrid="com.adobe.ColdFusion.components.datagrid.*"
+	xmlns:model="com.mvc.models.*"
+	xmlns:validation="com.adobe.ColdFusion.validation.*"
+	xmlns:customValidation="com.mvc.validation.*"
+	creationComplete="initComponent()"
+	explicitMaxHeight="{Application.application.height - 50}" 
+	title="Edit - Super Groups"
+	showCloseButton="true"
+	close="WindowManager.remove(this);" >
+
+
+	<mx:Metadata>
+		[Event("change")]
+	</mx:Metadata>
+
+	<mx:Script>
+		<![CDATA[
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			import mx.core.Application;
+			import mx.validators.Validator;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.FaultEvent;
+			import com.mvc.models.*;
+
+			private var _key:Object;
+
+			public function get key():Object
+			{
+				return this._key;
+			}
+
+			public function set key(key:Object):void
+			{
+				this._key = key;
+				getItem();
+			}
+
+			private function initComponent():void
+			{
+				getItem();
+			}
+
+
+
+
+			/**********************************************
+			 * Remote Server Calls and Call back handlers
+			 **********************************************/
+
+			// get an instance of the item from the server
+			public function getItem():void
+			{
+				if( this._key != null )
+				{
+					this.dataManager.getById(this._key);
+				}
+				else
+				{
+					// the key is null, so we'll create a new object for the 'add' operation. 
+					this.detailObject = new Edit_sgroups();
+				}
+			}
+
+			// save the edited object back on the server.
+			// and then throw a change event, so the master page
+			// can update itself accordingly
+			private function saveItem(item:Object):void
+			{
+				// array of validators to check before form is submitted
+				var validators:Array = [];
+				validators[0] = this.v0;
+				var inValidResults:Array = Validator.validateAll(validators);
+
+				if( inValidResults.length == 0 )
+				{
+					this.dataManager.save(item);
+				}
+			}
+
+			private function server_fault(event:FaultEvent):void
+			{
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function get_result(event:ResultEvent):void
+			{
+				var detail:Edit_sgroups = event.result as Edit_sgroups;
+
+				this.detailObject = detail;
+			}
+
+			private function save_result(event:ResultEvent):void
+			{
+				this.dispatchEvent( new Event("change") );
+				WindowManager.remove(this);
+			}
+
+		]]>
+	</mx:Script>
+
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="framework.cfcs.mvc.Edit_sgroups.sgroupsGateway">
+		<mx:method name="getById" result="get_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+
+<!-- create a model, using the AS Value Object class. With this mxml version of the model we can bind the form fields back to the object. --> 
+	<model:Edit_sgroups id="detailObject">
+		<model:name>{sgroups_name.text as String}</model:name>
+		<model:label>{sgroups_label.text as String}</model:label>
+		<model:image>{sgroups_image.text as String}</model:image>
+	</model:Edit_sgroups>
+
+	<mx:Validator id="v0" source="{this.sgroups_name}" property="text" required="true" />
+
+	<mx:Form width="100%" height="100%">
+		<mx:FormItem width="100%" label="Name" required="true">
+			<cfComponents:TextInputMask
+				 id="sgroups_name"
+				 text="{this.detailObject.name}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Label">
+			<cfComponents:TextInputMask
+				 id="sgroups_label"
+				 text="{this.detailObject.label}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Image">
+			<cfComponents:TextInputMask
+				 id="sgroups_image"
+				 text="{this.detailObject.image}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+	</mx:Form>
+
+	<mx:ControlBar horizontalAlign="right" width="100%">
+		<mx:Button id="saveBtn" label="Save" click="saveItem(this.detailObject)" />
+		<mx:Button id="cancelBtn" label="Cancel" click="WindowManager.remove(this);" />
+	</mx:ControlBar>
+
+
+</cfComponents:SizeableTitleWindow>

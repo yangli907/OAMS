@@ -1,0 +1,1 @@
+<cflocation url="bin/main.html" />

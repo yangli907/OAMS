@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	xmlns:cfDataGrid="com.adobe.ColdFusion.components.datagrid.*"
+	xmlns:model="com.mvc.models.*"
+	xmlns:validation="com.adobe.ColdFusion.validation.*"
+	xmlns:customValidation="com.mvc.validation.*"
+	creationComplete="initComponent()"
+	explicitMaxHeight="{Application.application.height - 50}" 
+	title="Edit - Comment"
+	showCloseButton="true"
+	close="WindowManager.remove(this);"  height="354" width="508">
+
+ 
+	<mx:Metadata>
+		[Event("change")]
+	</mx:Metadata>
+
+	<mx:Script>
+		<![CDATA[
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			import mx.core.Application;
+			import mx.validators.Validator;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.FaultEvent;
+			import com.mvc.models.*;
+			import flash.net.URLRequest;
+			import flash.net.URLVariables; 
+			private var _key:Object;
+			private var _aid:Object;//bruce
+
+			public function get key():Object
+			{
+				return this._key;
+			}
+
+			public function set key(key:Object):void
+			{
+				this._key = key;
+				getItem();
+			}
+			public function get aaid():Object
+			{
+				return this._aid;
+			}
+			
+			public function set aaid(aaid:Object):void
+			{
+				
+				this._aid = aaid;
+				getItem();
+			}
+			private function initComponent():void
+			{
+				var postVariables:URLVariables = new URLVariables;
+        	    postVariables.user = User.getInstance().id.toString();
+        	    var commenturl:URLRequest = new URLRequest("http://db1.elc.msu.edu/edtech/appmanage/cfcs/mvc/Edit_comment/commentDAO.cfc");
+        	    commenturl.data = postVariables;
+
+				getItem();
+				//this.referenceManager.grpLookup(User.getInstance().sel_sg);
+			}
+ 
+
+
+ 
+			/**********************************************
+			 * Remote Server Calls and Call back handlers
+			 **********************************************/
+
+			// get an instance of the item from the server
+			public function getItem():void
+			{
+				if( this._key != null )
+				{
+					this.dataManager.getById(this._key);
+				}
+  				else if( this._aid != null )
+				{	
+					this.detailObject.pid=aaid.toString(); //test by bruce
+				}  
+				else 
+				{
+					// the key is null, so we'll create a new object for the 'add' operation. 
+					 //test by bruce
+					this.detailObject = new Edit_comment();
+					//this.detailObject.sgrp = User.getInstance().sel_sg;
+				}
+			}
+
+			// save the edited object back on the server.
+			// and then throw a change event, so the master page
+			// can update itself accordingly
+			private function saveItem(item:Object):void
+			{
+				
+				// array of validators to check before form is submitted
+				var validators:Array = [];
+				var inValidResults:Array = Validator.validateAll(validators);
+
+				if( inValidResults.length == 0 )
+				{
+					this.dataManager.save(item,User.getInstance().id);
+				}
+			}
+
+			private function server_fault(event:FaultEvent):void
+			{
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function get_result(event:ResultEvent):void
+			{
+				var detail:Edit_comment = event.result as Edit_comment;
+				this.detailObject = detail;
+			}
+
+			private function save_result(event:ResultEvent):void
+			{
+				this.dispatchEvent( new Event("change") );
+				WindowManager.remove(this);
+			}
+			private function testbroad():void{
+				Alert.show(broad.selected.toString());
+			}
+
+		]]>
+	</mx:Script>
+
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_comment.commentGateway">
+		<mx:method name="getById" result="get_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+
+
+
+<!-- create a model, using the AS Value Object class. With this mxml version of the model we can bind the form fields back to the object. --> 
+	<model:Edit_comment id="detailObject">
+		<model:pid>{Number(pid.text)}</model:pid>
+		<model:content>{content.text as String}</model:content>
+		<model:broadcast>{broad.selected?1:0}</model:broadcast>
+	</model:Edit_comment>
+
+	<mx:Form width="461" height="259">
+		
+		<mx:FormItem width="100%" label="PID" required="true"  visible="false" height="0">
+			<cfComponents:TextInputMask
+				 id="pid"
+				 text="{this._aid.toString()}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:VBox height="216" width="428" horizontalScrollPolicy="off" verticalScrollPolicy="off">
+			<mx:Label text="Comment" fontWeight="bold"/>
+			<mx:TextArea  horizontalScrollPolicy="off" text="{this.detailObject.content}" id="content" width="401" height="156"/>
+			<mx:CheckBox includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}" id="broad" label="Broadcast this comment?" selected="{(this.detailObject.broadcast == 1)?true:false}"/>
+		</mx:VBox>
+	</mx:Form>
+
+	<mx:ControlBar horizontalAlign="right" width="100%">
+		<mx:Button id="saveBtn" label="Submit" click="saveItem(this.detailObject)" />
+		<mx:Button id="cancelBtn" label="Cancel" click="WindowManager.remove(this);" />
+	</mx:ControlBar>
+
+
+</cfComponents:SizeableTitleWindow>

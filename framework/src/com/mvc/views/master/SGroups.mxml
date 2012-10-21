@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	creationComplete="initComponent()"
+	title="SGroups"
+	showCloseButton="true" close="WindowManager.remove(this);" >
+
+	<mx:Script>
+		<![CDATA[
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.core.UIComponent;
+			import mx.collections.ArrayCollection;
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import com.mvc.views.detail.sgroupsEdit;
+			import mx.events.CloseEvent;
+			private var currentIndex:int = 0;
+
+			private var _key:Object;
+
+			[Bindable]
+			public function get key():Object
+			{
+				return this._key;
+			}
+			public function set key(key:Object):void
+			{
+				this._key = key;
+			}
+
+			private function initComponent():void
+			{
+				refreshList(null);
+			}
+
+			public function refreshList(event:Event):void
+			{
+				this.dataManager.getMasterQuery(this.key);
+			}
+
+			private function deleteItem(key:Object):void
+			{
+				this.dataManager.deleteItem(key);
+			}
+
+			private function getDetailComponent(key:Object):UIComponent
+			{
+				var view:sgroupsEdit = new sgroupsEdit();
+				view.key = key;
+				view.addEventListener("change", refreshList);
+				return view;
+			}
+
+			/**
+			 * RemoteObject result and error handlers
+			 */
+			private function server_fault(event:FaultEvent):void
+			{
+				// dump error message
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function getMasterQuery_result(event:ResultEvent):void 
+			{
+				//Alert.show( ObjectUtil.toString(event.result) );
+				this.masterList.dataProvider = event.result as ArrayCollection;
+				this.masterList.selectedIndex = this.currentIndex;
+			}
+
+			private function deleteItem_result(event:ResultEvent):void
+			{
+				//Alert.show( ObjectUtil.toString(event.result) );
+				refreshList(null);
+			}
+			
+			private function deleteMe(event:CloseEvent):void
+			{
+				if (event.detail == Alert.YES)
+				{
+					this.deleteItem(this.masterList.selectedItem.id)
+				}
+			}
+		]]>
+	</mx:Script>
+
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion" source="framework.cfcs.mvc.SGroups">
+		<mx:method name="getMasterQuery" result="getMasterQuery_result(event)" fault="server_fault(event)" />
+		<mx:method name="deleteItem" result="deleteItem_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+
+	<mx:HBox id="addEditDeleteToolbar">
+		<mx:Spacer width="100%"/>
+		<mx:Button id="addBtn"
+			icon="@Embed(source='../../../../images/add.png')" width="40"
+			click="WindowManager.add( getDetailComponent(null), this, false );" />
+		<mx:Button id="editBtn"
+			icon="@Embed(source='../../../../images/edit.png')" width="40"
+			enabled="{this.masterList.selectedIndex>=0}"
+			click="WindowManager.add( getDetailComponent(this.masterList.selectedItem.id), this, false );" />
+		<mx:Button id="deleteBtn"
+			icon="@Embed(source='../../../../images/delete.png')" width="40"
+			enabled="{this.masterList.selectedIndex>=0}"
+			click='Alert.show("Are you sure you want to delete this?", "Confirm Deletion", Alert.YES | Alert.NO, this, deleteMe, null, Alert.CANCEL);' />
+	</mx:HBox>
+
+	<mx:HBox width="100%" height="100%">
+		<mx:DataGrid
+			id="masterList"
+			doubleClickEnabled="true" 
+			doubleClick="this.currentIndex=this.masterList.selectedIndex; if(this.masterList.selectedItem!=null) { WindowManager.add( getDetailComponent(this.masterList.selectedItem.id), this, false ); }" 
+			width="100%" height="100%" top="0" left="0" right="0" bottom="0">
+			<mx:columns>
+				<mx:DataGridColumn dataField="name" headerText="Name" />
+			</mx:columns>
+		</mx:DataGrid>
+
+	</mx:HBox>
+
+</cfComponents:SizeableTitleWindow>

@@ -1,0 +1,510 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	xmlns:cfDataGrid="com.adobe.ColdFusion.components.datagrid.*"
+	xmlns:model="com.mvc.models.*"
+	xmlns:validation="com.adobe.ColdFusion.validation.*"
+	xmlns:customValidation="com.mvc.validation.*"
+	creationComplete="initComponent()"
+	explicitMaxHeight="{Application.application.height - 50}" 
+	title="Edit - Application"
+	showCloseButton="true"
+	close=" WindowManager.remove(this);"  height="550" >
+
+  
+	<mx:Metadata>
+		[Event("change")]
+	</mx:Metadata>
+
+	<mx:Script>
+		<![CDATA[
+			//import com.mvc.views.master.Mail;
+			import com.mail.Email;
+			import com.mail.Base64;
+			import mx.utils.ObjectUtil;
+			import mx.core.UIComponent;
+			import mx.controls.Alert;
+			import mx.core.Application;
+			import mx.collections.ArrayCollection;
+			import mx.validators.Validator;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.events.CloseEvent;
+			import com.mvc.models.*;
+   			import flash.net.navigateToURL;
+			private var _key:Object;
+			private var _aid:Object;
+			private var xmlSocket:Socket;
+			private var m:Email;
+			public var pid:String;
+			private var originaldec:Object;
+			private var originalcitiz:Object;
+			private var originalprogram:Object;
+			private var originalsession:Object;
+			private var currentIndex:int = 0;
+			
+			
+			public function get key():Object
+			{
+				return this._key;
+			}
+
+			public function set key(key:Object):void
+			{
+				this._key = key;
+				getItem();
+			}
+			
+			public function get aaid():Object
+			{
+				return this._aid;
+			}
+			
+			public function set aaid(aaid:Object):void
+			{
+				this._aid = aaid;
+				getItem();
+			}
+			
+			private function initComponent():void
+			{
+				
+				m = new Email("smtp.163.com");
+				getItem();
+				refreshList(null);
+				this.referenceManager.decLookup();
+				this.referenceManager.citizLookup();
+				this.referenceManager.programLookup();
+				this.referenceManager.sessionLookup();
+				
+				//this.referenceManager.grpLookup(User.getInstance().sel_sg);
+			}
+			
+			public function login():void{
+				
+				m.Send("yangli907","19860907","yangli907@163.com","linglangtech@gmail.com","Notification", "Completed Application!");
+			}
+			
+			 private function openURL(url:String):void {
+                 var urlRequest:URLRequest = new URLRequest(url);
+                 navigateToURL(urlRequest, "_blank");
+             }
+
+//test email sending
+
+			public function sendEmail():void{
+				var u:URLRequest = new URLRequest(
+				"mailto:" + "hardiso2@msu.edu,loewens@msu.edu,winke@msu.edu,linglangtech@gmail.com"
+				+"?subject=Application is completed"
+				+"&body=The TESOL program application "+pid.toString()+ " is completed by "+User.getInstance().first.toString()+" "+User.getInstance().last.toString()+".");
+				navigateToURL(u,"_self"); 
+			}
+			/**********************************************
+			 * Remote Server Calls and Call back handlers
+			 **********************************************/
+
+			// get an instance of the item from the server
+			public function getItem():void
+			{
+				if( this._key != null )
+				{
+					this.dataManager.getById(this._key);
+				}
+				else 
+				{
+					// the key is null, so we'll create a new object for the 'add' operation. 
+					this.detailObject = new Edit_application();
+					//this.detailObject.sgrp = User.getInstance().sel_sg;
+				}
+			}
+
+			// save the edited object back on the server.
+			// and then throw a change event, so the master page
+			// can update itself accordingly
+			private function saveItem(item:Object):void
+			{
+				
+				// array of validators to check before form is submitted
+				var validators:Array = [];
+				// validators[0] = this.v0;
+	
+				var inValidResults:Array = Validator.validateAll(validators);
+
+				if( inValidResults.length == 0 )
+				{
+					this.dataManager.save(item);
+				}
+			}
+
+			private function server_fault(event:FaultEvent):void
+			{
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function get_result(event:ResultEvent):void
+			{
+				var detail:Edit_application = event.result as Edit_application;
+				originaldec = detail.decid;
+				originalcitiz = detail.citizid;
+				originalprogram = detail.progcode;
+				originalsession = detail.sessionid;
+				this.detailObject = detail;
+			}
+
+			private function save_result(event:ResultEvent):void
+			{
+				this.dispatchEvent( new Event("change") );
+				WindowManager.remove(this);
+			}
+			private function decLookup_result(event:ResultEvent):void
+			{
+				this.decid.dataProvider = event.result;
+				this.decid.selectedItem = originaldec;
+			}
+			private function citizLookup_result(event:ResultEvent):void
+			{
+				this.citizid.dataProvider = event.result;
+				this.citizid.selectedItem = originalcitiz;
+			}
+			private function programLookup_result(event:ResultEvent):void
+			{ 
+				this.progcode.dataProvider = event.result;
+				this.progcode.selectedItem = originalprogram;
+			} 
+			private function sessionLookup_result(event:ResultEvent):void
+			{ 
+				this.sessionid.dataProvider = event.result;
+				this.sessionid.selectedItem = originalsession;
+			}
+			 
+			//embedded fileList operation------------------------------
+			public function refreshList(event:Event):void
+			{
+				this.fileManager.getMasterQuery(this.key);
+				if(User.getInstance().admin==0&&User.getInstance().sgadmin==0){
+					this.commentManager.getCommentgQuery(this.key,User.getInstance().first.toString());
+				}
+				else if(User.getInstance().admin==1||User.getInstance().sgadmin==1)this.commentManager.getCommentQuery(this.key);
+			}
+
+			private function deleteItem(key:Object):void
+			{
+				this.fileManager.deleteItem(key);
+			}
+			
+			private function deleteComment(key:Object):void
+			{
+				this.commentManager.deleteItem(key);
+				
+			}
+
+			private function getDetailComponent(key:Object):UIComponent
+			{
+				var view:fileEdit = new fileEdit(); 
+				view.key = key;				
+				view.addEventListener("change", refreshList);
+				//Alert.show(key.toString());
+				return view;
+			}
+			
+			private function getDetailComponent1(key:Object,aaid:Object):UIComponent
+			{
+				var view:fileEdit1 = new fileEdit1(); 
+				view.key = key;
+				view.aaid = aaid;
+				view.addEventListener("change", refreshList);
+				//Alert.show(key.toString());
+				return view;
+			}
+			
+			private function getCommentComponent(key:Object,aaid:Object):UIComponent
+			{
+				var view:commentEdit = new commentEdit();
+				view.key = key;
+				view.aaid = aaid;
+				view.addEventListener("change", refreshList);
+				//Alert.show(key.toString());
+				return view;
+			}
+			
+		
+			private function getMasterQuery_result(event:ResultEvent):void 
+			{
+				//Alert.show( ObjectUtil.toString(event.result) );
+				this.masterList.dataProvider = event.result as ArrayCollection;
+				this.masterList.selectedIndex = this.currentIndex;
+			}
+
+			private function getCommentQuery_result(event:ResultEvent):void 
+			{
+				//Alert.show( ObjectUtil.toString(event.result) );
+				this.commentList.dataProvider = event.result as ArrayCollection;
+				this.commentList.selectedIndex = this.currentIndex;
+			}
+
+			private function deleteItem_result(event:ResultEvent):void
+			{
+				//Alert.show( ObjectUtil.toString(event.result) );
+				refreshList(null);
+			}
+			
+			private function deleteMe(event:CloseEvent):void
+			{
+				if (event.detail == Alert.YES)
+				{
+					this.deleteItem(this.masterList.selectedItem.id)
+					refreshList(null); 
+				}
+			}			
+			//embedded fileList operation------------------------------
+			private function deleteMe2(event:CloseEvent):void
+			{
+				if (event.detail == Alert.YES)
+				{
+					this.deleteComment(this.commentList.selectedItem.id)
+					refreshList(null); 
+				}
+			}				
+		]]>
+	</mx:Script>
+
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_application.applicationGateway">
+		<mx:method name="getById" result="get_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+
+ 	<mx:RemoteObject
+		id="referenceManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_application.applicationResources">
+		<mx:method name="decLookup" result="decLookup_result(event)" fault="server_fault(event)" />
+		<mx:method name="citizLookup" result="citizLookup_result(event)" fault="server_fault(event)" />
+		<mx:method name="programLookup" result="programLookup_result(event)" fault="server_fault(event)" />
+		<mx:method name="sessionLookup" result="sessionLookup_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+	 
+	<mx:RemoteObject
+		id="fileManager"
+		showBusyCursor="true"
+		destination="ColdFusion" 
+		source="appmanage.cfcs.mvc.File">
+		<mx:method name="getMasterQuery" result="getMasterQuery_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+	
+	<mx:RemoteObject
+		id="commentManager"
+		showBusyCursor="true"
+		destination="ColdFusion" 
+		source="appmanage.cfcs.mvc.Comment">
+		<mx:method name="getCommentQuery" result="getCommentQuery_result(event)" fault="server_fault(event)" />
+		<mx:method name="getCommentgQuery" result="getCommentQuery_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+	
+<!-- create a model, using the AS Value Object class. With this mxml version of the model we can bind the form fields back to the object. --> 
+	<model:Edit_application id="detailObject">
+		<model:id>{Number(Id.text)}</model:id>
+		<model:sid>{Number(sid.text)}</model:sid>
+		<model:decid>{Number(decid.selectedItem.id)}</model:decid>
+		<model:citizid>{Number(citizid.selectedItem.id)}</model:citizid>
+		<model:progcode>{Number(progcode.selectedItem.id)}</model:progcode>
+		<model:sessionid>{Number(sessionid.selectedItem.id)}</model:sessionid>
+		<model:batrans>{batrans.text as String}</model:batrans>
+		<model:matrans>{matrans.text as String}</model:matrans>
+		<model:grea>{grea.text as String}</model:grea>
+		<model:greq>{greq.text as String}</model:greq>
+		<model:grev>{grev.text as String}</model:grev>
+		<model:toefl>{toefl.text as String}</model:toefl>
+		<model:letter1>{letter1.text as String}</model:letter1>
+		<model:letter2>{letter2.text as String}</model:letter2>
+		<model:letter3>{letter3.text as String}</model:letter3>
+	</model:Edit_application>
+	<mx:HBox width="100%" height="462">
+		<mx:Form  >
+			<mx:FormItem width="237" label="ID"  visible="false" height="0">
+				<cfComponents:TextInputMask
+					 id="Id"
+					 text="{this.detailObject.id}"
+					 width="156"
+					 editable="false" enabled="true"/>
+			</mx:FormItem>
+			<mx:FormItem width="237" label="SID" visible="false" height="0">
+				<cfComponents:TextInputMask 
+					 id="sid"
+					 text="{this.detailObject.sid}"
+					 width="156"
+					 editable="false" enabled="true"/>
+			</mx:FormItem>
+			 
+			<mx:FormItem label=" Citizenship" width="230">
+				<cfComponents:BindableComboBox
+					 id="citizid"				 
+					 valueField="id"
+					 labelFields="[citizenship]"
+					 width="146"
+					 selectedItem=""
+					 />
+			</mx:FormItem>
+				
+				<mx:HBox width="100%">
+						<mx:FormItem label="     Session       " width="244">
+							<cfComponents:BindableComboBox
+								 id="sessionid"				 
+								 valueField="id"
+								 labelFields="[session]"
+								 width="147"
+								 selectedItem=""
+								 />
+						</mx:FormItem>
+						<mx:FormItem label="Program">
+							<cfComponents:BindableComboBox
+								 id="progcode"				 
+								 valueField="id"
+								 labelFields="[program]"
+								 width="100%"
+								 selectedItem=""
+								 />
+						</mx:FormItem>
+				</mx:HBox>
+				
+						<mx:HBox width="100%">
+										<mx:FormItem width="240" label="BA Transcript" >
+											<cfComponents:TextInputMask
+												 id="batrans"
+												 text="{this.detailObject.batrans}"
+												 width="144"/>
+										</mx:FormItem>
+										<mx:FormItem width="238" label="MA Transcript" >
+											<cfComponents:TextInputMask
+												 id="matrans"
+												 text="{this.detailObject.matrans}"
+												 width="183"/>
+										</mx:FormItem>
+						</mx:HBox>
+			<mx:FormItem width="209" label="TOEFL " >
+				<cfComponents:TextInputMask
+					 id="toefl"
+					 width="146" text="{this.detailObject.toefl}"/>
+			</mx:FormItem>
+				
+				<mx:HBox width="100%">
+						<mx:FormItem label="  GRE">
+							<mx:HBox width="183">
+								<mx:VBox height="100%" width="169">
+									<mx:FormItem width="151" label="V" >
+										<cfComponents:TextInputMask
+											 id="grev"
+											 width="113" text="{this.detailObject.grev}"/>
+									</mx:FormItem>
+									<mx:FormItem width="151" label="Q" >
+										<cfComponents:TextInputMask
+											 id="greq"
+											 width="113" text="{this.detailObject.greq}"/>
+									</mx:FormItem>
+									<mx:FormItem width="152" label="A" >
+										<cfComponents:TextInputMask
+											 id="grea"
+											 width="114" text="{this.detailObject.grea}"/>
+									</mx:FormItem>
+								</mx:VBox>
+							</mx:HBox>
+						</mx:FormItem>
+						<mx:FormItem label="Letter">
+							<mx:HBox width="100%">
+								<mx:VBox height="100%" width="181">
+									<mx:FormItem width="173" label="1" >
+										<cfComponents:TextInputMask
+											 id="letter1"
+											 width="113" text="{this.detailObject.letter1}"/>
+									</mx:FormItem>
+									<mx:FormItem width="172" label="2" >
+										<cfComponents:TextInputMask
+											 id="letter2"
+											 width="113" text="{this.detailObject.letter2}"/>
+									</mx:FormItem>
+									<mx:FormItem width="171" label="3" >
+										<cfComponents:TextInputMask
+											 id="letter3"
+											 width="114" text="{this.detailObject.letter3}"/>
+									</mx:FormItem>
+								</mx:VBox>
+							</mx:HBox>
+						</mx:FormItem>
+				</mx:HBox>
+						
+						<mx:HBox width="100%">
+										<mx:FormItem label="   Decision" width="245">
+											<cfComponents:BindableComboBox
+												 id="decid"				 
+												 valueField="id"
+												 labelFields="[decision]"
+												 width="155"
+												 selectedItem=""
+												 />
+										</mx:FormItem>
+										<mx:Button label="Application is completed" click="{sendEmail()}"  includeInLayout="{User.getInstance().admin||User.getInstance().sgadmin}" visible="{User.getInstance().admin||User.getInstance().sgadmin}"/>
+						</mx:HBox>
+			<mx:FormItem label="Files" height="160" width="480" borderStyle="none">
+				<mx:DataGrid id="masterList" height="151" width="380" itemDoubleClick="openURL(this.masterList.selectedItem.path.toString())" doubleClickEnabled="true">
+					<mx:columns>
+						<!--	<mx:DataGridColumn headerText="Application#" dataField="aid" width="100"/> -->
+						
+						<mx:DataGridColumn headerText="File Name" dataField="filename" width="170"/>
+						<mx:DataGridColumn headerText="Uploader" dataField="user" width="70"/>
+						<mx:DataGridColumn headerText="Date" dataField="uploadtime" width="70"/>					
+					</mx:columns>
+				</mx:DataGrid>
+			</mx:FormItem>
+		<mx:HBox id="addEditDeleteToolbar" includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}">
+			<mx:Spacer width="100%"/>
+			<mx:Button id="addBtn"
+				icon="@Embed(source='../../../../images/add.png')" width="40"
+				click="WindowManager.add( getDetailComponent1(null,Number(Id.text)), this, false );" /> 
+			<mx:Button id="deleteBtn"
+				icon="@Embed(source='../../../../images/delete.png')" width="40"
+				enabled="{this.masterList.selectedIndex>=0}"
+				click='Alert.show("Are you sure you want to delete this?", "Confirm Deletion", Alert.YES | Alert.NO, this, deleteMe, null, Alert.CANCEL);' />
+		</mx:HBox>
+		</mx:Form>
+		<mx:VBox > 
+			<mx:HBox id="addEditDeleteToolbar0" >
+				<mx:Spacer width="100%"/>
+				<mx:Button id="addBtn0"
+					icon="@Embed(source='../../../../images/add.png')" width="40"
+					click="WindowManager.add( getCommentComponent(null,this.key), this, false );" /> 
+				<mx:Button id="editBtn0"
+					icon="@Embed(source='../../../../images/edit.png')" width="40"
+					enabled="{this.masterList.selectedIndex>=0}"
+					includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}"
+					click="WindowManager.add( getCommentComponent(this.commentList.selectedItem.id,this.commentList.selectedItem.pid), this, false );" />
+				<mx:Button id="deleteBtn0"
+					icon="@Embed(source='../../../../images/delete.png')" width="40"
+					enabled="{this.commentList.selectedIndex>=0}"
+					includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}"
+					click='Alert.show("Are you sure you want to delete this?", "Confirm Deletion", Alert.YES | Alert.NO, this, deleteMe2, null, Alert.CANCEL);' />
+			</mx:HBox>
+			<mx:DataGrid id="commentList" width="465" height="408" doubleClickEnabled="{User.getInstance().admin}" doubleClick="this.currentIndex=this.commentList.selectedIndex; if(this.commentList.selectedItem!=null) { WindowManager.add( getCommentComponent(this.commentList.selectedItem.id,this.commentList.selectedItem.pid), this, false ); }">
+				<mx:columns>
+					<mx:DataGridColumn headerText="User" dataField="user" width="40" wordWrap="true"/>
+					<mx:DataGridColumn headerText="Comment" dataField="content" width="200" wordWrap="true"/>
+					<mx:DataGridColumn headerText="Date" dataField="addtime" width="80" wordWrap="true"/>
+				</mx:columns>
+			</mx:DataGrid>
+	
+		</mx:VBox>
+	</mx:HBox>
+	<mx:ControlBar horizontalAlign="right" width="100%"  includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}" height="35">
+		<mx:Button id="saveBtn" label="Save" click="saveItem(this.detailObject)" />
+		<mx:Button id="cancelBtn" label="Cancel" click="WindowManager.remove(this);" />
+	</mx:ControlBar>
+
+
+</cfComponents:SizeableTitleWindow>

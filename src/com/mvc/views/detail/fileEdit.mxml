@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml"  xmlns="*"
+	xmlns:com="com.flashdev.file.*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	xmlns:cfDataGrid="com.adobe.ColdFusion.components.datagrid.*"
+	xmlns:model="com.mvc.models.*"
+	xmlns:validation="com.adobe.ColdFusion.validation.*"
+	xmlns:customValidation="com.mvc.validation.*"
+	creationComplete="initComponent()"
+	explicitMaxHeight="{Application.application.height - 50}" 
+	title="Edit - Student Address"
+	showCloseButton="true"
+	close="WindowManager.remove(this);"  height="488" width="478">
+
+ 
+	<mx:Metadata>
+		[Event("change")]
+	</mx:Metadata>
+
+	<mx:Script>
+		<![CDATA[
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			import mx.core.Application;
+			import mx.validators.Validator;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.FaultEvent;
+			import com.mvc.models.*;
+			//add for file chooser by Bruce
+			import mx.managers.PopUpManager;
+			import mx.containers.TitleWindow;
+			import flash.geom.Point;
+			private var point1:Point = new Point();
+			private var file:FileReferenceList = new FileReferenceList();
+			private var fileFilter:FileFilter = new FileFilter("Documents(*.doc,*.docx,*.pdf,*.html)","*.doc;*.docx;*.pdf;*.html");
+			private var originalfiletype:Object;
+			private var _key:Object;
+			//private var ctry:Object;
+		     private var urlRequest:URLRequest;
+    		 private var fileReferenceList:FileReferenceList;
+			private var serverSideScript:String = "http://dev2.matrix.msu.edu/lingtest/asian/chinese/CSE824/upload1.cfm";
+			public function get key():Object
+			{
+				return this._key;
+			}
+
+			public function set key(key:Object):void
+			{
+				this._key = key;
+				getItem();
+			}
+
+			private function initComponent():void
+			{
+				getItem();
+				this.referenceManager.fileLookup();
+				//file upload component init by bruce
+ 				urlRequest = new URLRequest(serverSideScript);
+   				fileReferenceList = new FileReferenceList();
+       			fileReferenceList.addEventListener(Event.SELECT, fileSelectedHandler); 
+				//file upload component init by bruce end
+			} 
+
+	//upload component by bruce
+/* 		private const _strDomain:String = new String("http://db1.elc.msu.edu/edtech");
+		private const _strUploadScript:String = new String(_strDomain + "/appmanage/src/com/mvc/views/detail/upload.php");
+			 
+			// Initalize
+ 		private function initApp():void {
+ 				
+				Security.allowDomain(_strDomain);
+			}  */
+			
+      private function fileSelectedHandler(event:Event):void {
+       var fileReference:FileReference;
+       var fileReferenceList:FileReferenceList = FileReferenceList(event.target);
+       var fileList:Array = fileReferenceList.fileList;
+       fileReference = FileReference(fileList[0]);            
+       fileReference.addEventListener(Event.COMPLETE, uploadCompleteHandler);
+       fileReference.upload(urlRequest);
+       Alert.show("uploading!");
+     }
+     private function uploadFile():void {
+       fileReferenceList.browse();
+     }
+     private function uploadCompleteHandler(event:Event):void {
+       Alert.show("The uploaded file: "+event.target.name);
+     }  
+	//upload component by bruce end
+
+			/**********************************************
+			 * Remote Server Calls and Call back handlers
+			 **********************************************/
+
+			// get an instance of the item from the server
+			public function getItem():void
+			{
+				if( this._key != null )
+				{
+					this.dataManager.getById(this._key);
+				}
+				else 
+				{
+					// the key is null, so we'll create a new object for the 'add' operation. 
+					this.detailObject = new Edit_file();
+					//this.detailObject.sgrp = User.getInstance().sel_sg;
+				}
+			}
+
+			// save the edited object back on the server.
+			// and then throw a change event, so the master page
+			// can update itself accordingly
+			private function saveItem(item:Object):void
+			{
+				
+				// array of validators to check before form is submitted
+				var validators:Array = [];
+				validators[0] = this.v0;
+				validators[1] = this.v1;
+				var inValidResults:Array = Validator.validateAll(validators);
+
+				if( inValidResults.length == 0 )
+				{
+					this.dataManager.save(item);
+				}
+			}
+
+			private function server_fault(event:FaultEvent):void
+			{
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function get_result(event:ResultEvent):void
+			{
+				var detail:Edit_file = event.result as Edit_file;
+				originalfiletype = detail.typeid;
+				this.detailObject = detail;
+								
+			}
+
+			private function save_result(event:ResultEvent):void
+			{
+				this.dispatchEvent( new Event("change") );
+				WindowManager.remove(this);
+			}
+ 
+			private function fileLookup_result(event:ResultEvent):void
+			{
+				this.typeid.dataProvider = event.result;
+				this.typeid.selectedItem = originalfiletype;
+			} 
+			
+			//add for file chooser by Bruce
+			private function showWindow():void{
+				file.browse([fileFilter]);
+				file.addEventListener(Event.SELECT,onFileSelect);
+			}
+			
+			private function onFileSelect(event:Event):void{
+				for(var i:int=0;i<file.fileList.length;i++){
+					var f:FileReference = FileReference(file.fileList[i]);
+					path.text=f.name;
+					
+				}
+			}
+		]]>
+	</mx:Script>
+
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_file.fileGateway">
+		<mx:method name="getById" result="get_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+ 
+ 	<mx:RemoteObject
+		id="referenceManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_file.fileResources">
+		<mx:method name="fileLookup" result="fileLookup_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+	
+<!-- create a model, using the AS Value Object class. With this mxml version of the model we can bind the form fields back to the object. --> 
+	<model:Edit_file id="detailObject">
+		<model:aid>{Number(aid.text)}</model:aid>
+		<model:path>{path.text as String}</model:path>
+		<model:name>{Name.text as String}</model:name>
+		<model:typeid>{Number(typeid.selectedItem.id)}</model:typeid>
+	</model:Edit_file>
+	<mx:Validator id="v0" source="{this.path}" property="text" required="true" />
+	<mx:Validator id="v1" source="{this.Name}" property="text" required="true" />
+	<mx:Form width="100%" height="100%"> 
+		<mx:FormItem width="100%" label="Application#" required="true">
+			<cfComponents:TextInputMask
+				 id="aid"
+				 text="{this.detailObject.aid}" 
+				 editable="false" enabled="true"/>
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Path" required="true">
+			<mx:HBox width="247">
+				<cfComponents:TextInputMask
+					 id="path"
+					 text="{this.detailObject.path}" 
+					  editable="false" enabled="true"/>
+				<mx:Button label="Browse" click="browse.label='Upload';showWindow();" id="browse"/>
+	
+
+	
+			</mx:HBox>
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Name" required="true">
+			<cfComponents:TextInputMask
+				 id="Name"
+				 text="{this.detailObject.name}" 
+				 />
+		</mx:FormItem>
+		<mx:FormItem label="File Type">
+			<cfComponents:BindableComboBox
+				 id="typeid"				 
+				 valueField="filetype"
+				 labelFields="[filetype]"
+				 width="211"
+				 selectedItem=""
+				 />
+		</mx:FormItem>
+	</mx:Form>
+
+	
+	
+	<mx:ControlBar horizontalAlign="right" width="100%">
+		<mx:Button id="saveBtn" label="Save" click="saveItem(this.detailObject)" />
+		<mx:Button id="cancelBtn" label="Cancel" click="WindowManager.remove(this);" />
+	</mx:ControlBar>
+</cfComponents:SizeableTitleWindow>

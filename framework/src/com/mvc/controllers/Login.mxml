@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:VBox xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns:login="com.mvc.views.login.*"
+	verticalScrollPolicy="off" horizontalScrollPolicy="off">
+	 
+	<mx:Metadata>
+		[Event(type="loginSuccessful")]		
+	</mx:Metadata>	
+    <mx:Script>
+	<![CDATA[
+		import mx.collections.ArrayCollection;
+		import mx.rpc.events.ResultEvent;
+		import mx.utils.ObjectUtil;
+		import mx.rpc.events.FaultEvent;
+		import mx.controls.Alert;
+		
+		private function onLogin():void
+		{
+		    this.dispatchEvent( new Event("loginSuccessful") );
+		}
+	]]>
+    </mx:Script>
+    
+    
+    <mx:Panel
+        width="75%" height="50%" layout="vertical" backgroundAlpha=".5"
+        verticalScrollPolicy="off" horizontalScrollPolicy="off">
+            <login:LoginForm
+                loginSuccessful="onLogin()"
+                verticalScrollPolicy="off" horizontalScrollPolicy="off" />
+    </mx:Panel>
+</mx:VBox>

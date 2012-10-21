@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:Form xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	width="538" height="100%" defaultButton="{loginBtn}"
+	creationComplete="initApp()">
+   
+    <mx:Metadata>
+       [Event("forgotpassword")] 
+       [Event("loginSuccessful")]
+    </mx:Metadata>
+    
+    <mx:Script>
+        <![CDATA[
+        	import mx.events.ResizeEvent;
+        	import mx.events.ValidationResultEvent;
+            import mx.rpc.events.ResultEvent;
+            import mx.rpc.events.FaultEvent;
+            import mx.utils.ObjectUtil;
+            import mx.controls.Alert;
+			import mx.collections.ArrayCollection;
+			import com.mvc.views.navigation.navigation;
+			import com.adobe.crypto.SHA1;
+
+            public var invid:Object;
+            [Bindable]
+            private var selsg:Number;
+            
+            
+            private var lso:SharedObject;
+			
+            
+            private function initApp():void
+            {
+            	this.dataManager.getMasterQuery();
+            	this.lso = SharedObject.getLocal("framework-auth");
+
+				if( this.lso.data['email'] != null )
+				{
+            		this.email.text = this.lso.data['email'];
+            		this.selsg = Number(this.lso.data['sel_sg']);
+            		this.rememberLogin.selected = true;
+    			}
+            }
+            
+            private function isValid():Boolean
+            {
+            	var emailValidResult:ValidationResultEvent = this.emailValidate.validate(this.email.text);
+            	var pswdValidResult:ValidationResultEvent = this.pswdValidate.validate(this.password.text);
+            	
+            	if (emailValidResult.type==ValidationResultEvent.VALID 
+            			&& pswdValidResult.type==ValidationResultEvent.VALID) 
+            	{
+            		return true;	
+            	}
+            	else
+            	{
+            		return false;	
+            	}
+            	
+            }                        
+            
+            
+            private function authenticateUser():void
+            {
+				if( isValid() )
+           		{
+                	authManager.login( this.email.text, SHA1.hash(this.password.text), this.sel_sg.selectedItem.id);   
+             	}
+            } 
+            
+            private function errorMessage(msg:String):void
+            {
+                //Alert.show( ObjectUtil.toString(event.message) );
+                this.errorMsg.text = msg;
+                this.errorMsg.height = 20;
+                this.errorMsg.visible = true;
+            }    
+   
+            private function serverFault(event:FaultEvent):void
+            {
+                errorMessage(event.message['message']);
+            }   
+            
+            private function login_user(event:ResultEvent):void
+            {
+            
+            }
+            
+            private function login_result(event:ResultEvent):void
+            {
+            	
+            	this.invid = event.result as ArrayCollection;
+            	
+            	// login successful, remember the user.
+            	if( event.result != "false" )
+            	
+            	{
+	            	if( this.rememberLogin.selected )
+	            	{
+		            	this.lso.data['email'] = this.email.text;
+		            	this.lso.data['sel_sg'] = this.sel_sg.selectedItem.id;
+	            	}
+	            	else
+	            	{
+		            	this.lso.clear();		
+	            	}
+	            	
+	            	User.getInstance().id = invid[0]['id'];
+	            	User.getInstance().grp = invid[0]['grp'];
+	            	User.getInstance().sgrp = invid[0]['sgrp'];
+	            	User.getInstance().sgadmin = invid[0]['sgadmin'];
+	            	User.getInstance().admin = invid[0]['admin'];
+	            	User.getInstance().first = invid[0]['first'];
+	            	User.getInstance().last = invid[0]['last'];
+	            	User.getInstance().sel_sg = this.sel_sg.selectedItem.id;
+	            	
+	            	this.lso.flush();
+				    this.dispatchEvent( new Event('loginSuccessful') );
+            	}
+            	if( event.result == "false" )
+            	{
+            		// login didn't work. show message
+            		errorMessage("Login unsuccessful");	
+            	}
+            }
+		
+			private function getMasterQuery_result(event:ResultEvent):void
+			{
+				this.sel_sg.dataProvider = event.result as ArrayCollection;
+				this.sel_sg.selectedItem = this.selsg;
+			}
+		
+        ]]>
+    </mx:Script>
+    
+    
+    <mx:RemoteObject 
+        id="authManager" 
+        destination="ColdFusion" 
+        source="framework.cfcs.mvc.managers.Auth" 
+        showBusyCursor="true">
+       <mx:method name="login" result="login_result(event)" fault="serverFault(event)" />
+    </mx:RemoteObject>
+    
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion" source="framework.cfcs.mvc.SGroups">
+		<mx:method name="getMasterQuery" result="getMasterQuery_result(event)" fault="serverFault(event)" />
+	</mx:RemoteObject>
+	
+
+    <mx:EmailValidator 
+    	id="emailValidate" 
+    	source="{this.email}" 
+    	property="text" 
+    	required="true" />
+    <mx:StringValidator 
+    	id="pswdValidate" 
+    	source="{this.password}" 
+    	property="text" 
+    	required="true" />
+    
+
+
+    <mx:Text width="100%" height="26" 
+    	text="Welcome to "  fontSize="18" fontFamily="Verdana" fontWeight="bold"/>
+    <mx:Text width="524" height="35" 
+    	text="Application Management System"  fontSize="22" fontFamily="Arial" fontWeight="bold" textAlign="left"/>
+    
+    <mx:Text id="errorMsg" visible="true" 
+        color="red" width="100%" height="0" />
+        
+    <mx:FormItem   visible="false" width="76%" label="Dept" required="true">
+    	<cfComponents:BindableComboBox
+			 id="sel_sg"
+			 valueField="id"
+			 labelFields="[name]"
+			 width="100%"
+			 />
+    </mx:FormItem>
+
+    
+    <mx:FormItem width="291" label="Email" required="true">
+        <mx:TextInput id="email" 
+            width="175"/>
+    </mx:FormItem>
+    <mx:FormItem width="290" label="Password" required="true">
+        <mx:TextInput id="password" 
+        	displayAsPassword="true"  
+            width="175"/>
+    </mx:FormItem>
+    <mx:FormItem>
+    	<mx:CheckBox id="rememberLogin" 
+    		label="Remember Login"
+    		selected="false" />
+    </mx:FormItem>
+    
+    <mx:VBox width="289" horizontalAlign="right">
+        <mx:Button id="loginBtn" label="Login" click="authenticateUser();"/> 
+        <!-- <mx:LinkButton label="Forgot Password?" 
+            click="this.dispatchEvent(new Event('forgotpassword'));"
+            fontStyle="italic" width="150"  textAlign="right"/> -->
+    </mx:VBox>    
+    
+</mx:Form>

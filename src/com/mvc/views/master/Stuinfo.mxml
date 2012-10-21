@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	creationComplete="initComponent()"
+	title="Student Information"
+	showCloseButton="true" close="WindowManager.remove(this);"  width="1250" height="654">
+
+	<mx:Script>
+		<![CDATA[
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.core.UIComponent;
+			import mx.collections.ArrayCollection;
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			import com.mvc.views.detail.stuinfoEdit;
+			import com.mvc.views.detail.addressEdit;
+			import mx.events.CloseEvent;
+			private var currentIndex:int = 0;
+ 
+			private var _key:Object;
+			private var _keyword:Object; 
+		    private var originalprogram:Object;
+		    [Bindable]
+			public function get key():Object
+			{
+				return this._key;
+			}
+			public function set key(key:Object):void
+			{
+				this._key = key;
+			}	
+
+			private function initComponent():void
+			{
+				if(!User.getInstance().admin){
+					getdept(User.getInstance().grp.toString());
+				}
+				else{
+				refreshList(null);
+				}
+				this.referenceManager.programLookup();
+			}
+
+			public function refreshList(event:Event):void
+			{
+				this.dataManager.getMasterQuery(this.key);
+			}
+  			public function refreshSublist(event:Event):void
+			{
+				//Alert.show(this.masterList.selectedItem.id);
+				this.subdataManager.getSubQuery(this.masterList.selectedItem.id);
+			}  
+			private function deleteItem(key:Object):void
+			{
+				this.dataManager.deleteItem(key);
+			}
+			private function programLookup_result(event:ResultEvent):void // add by bruce
+			{
+				this.progcode.dataProvider = event.result;
+				this.progcode.selectedItem = originalprogram;
+			}
+			private function getDetailComponent(key:Object):UIComponent
+			{
+				var view:stuinfoEdit = new stuinfoEdit(); 
+				view.key = key;
+				view.addEventListener("change", refreshList);
+				//Alert.show(key.toString());
+				return view;
+			}
+			//Bruce add 
+ 			private function getSubDetailComponent(sid:Object):UIComponent
+			{
+				var view:addressEdit = new addressEdit(); 
+				view.key = sid;
+				view.addEventListener("change", refreshSublist);
+				return view;
+			} 
+
+			/**
+			 * RemoteObject result and error handlers
+			 */
+			private function server_fault(event:FaultEvent):void
+			{
+				// dump error message
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function getMasterQuery_result(event:ResultEvent):void 
+			{
+				this.masterList.dataProvider = event.result as ArrayCollection;
+				//this.masterList.selectedIndex = this.currentIndex;
+			}
+			
+			private function getSearchQuery_result(event:ResultEvent):void 
+			{
+				this.masterList.dataProvider = event.result as ArrayCollection;
+				//this.masterList.selectedIndex = this.currentIndex;
+			}
+
+			private function deleteItem_result(event:ResultEvent):void
+			{
+				//Alert.show( ObjectUtil.toString(event.result) );
+				refreshList(null);
+			}
+			
+			//Bruce add
+			
+ 			private function getSubQuery_result(event:ResultEvent):void 
+			{
+				//Alert.show( ObjectUtil.toString(event.result) );
+				this.subList.dataProvider = event.result as ArrayCollection;
+				this.subList.selectedIndex = this.masterList.selectedItem.id;
+			} 
+			
+			private function getCategoryQuery_result(event:ResultEvent):void 
+			{
+				this.masterList.dataProvider = event.result as ArrayCollection;
+				//this.masterList.selectedIndex = this.currentIndex;
+			}
+/* 
+			private function deleteSubItem_result(event:ResultEvent):void
+			{
+				//Alert.show( ObjectUtil.toString(event.result) );
+				refreshSublist(null);
+			} */
+			//Bruce add
+			
+			private function deleteMe(event:CloseEvent):void
+			{
+				if (event.detail == Alert.YES)
+				{
+					this.deleteItem(this.masterList.selectedItem.id)
+				}
+			} 
+			
+			private function deleteMe2(event:CloseEvent):void
+			{
+				if (event.detail == Alert.YES)
+				{
+					this.deleteItem(this.subList.selectedItem.id)
+				}
+			} 
+			private function category(keyword:String):void
+			{
+				//Alert.show(keyword.toString());
+				this.dataManager.getCategoryResult(keyword);
+			}			
+  			private function search(keyword:String):void
+			{
+				this.dataManager.getSearchResult(keyword);
+			} 
+			
+			private function getdept(keyword:String):void
+			{
+				//Alert.show(keyword.toString());
+				this.dataManager.getDeptResult(keyword);
+			}
+		]]>
+	</mx:Script>
+
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion" source="appmanage.cfcs.mvc.Stuinfos">
+		<mx:method name="getMasterQuery" result="getMasterQuery_result(event)" fault="server_fault(event)" />
+		<mx:method name="getSearchResult" result="getSearchQuery_result(event)" fault="server_fault(event)" />
+		<mx:method name="getDeptResult" result="getSearchQuery_result(event)" fault="server_fault(event)" />
+		<mx:method name="deleteItem" result="deleteItem_result(event)" fault="server_fault(event)" />
+		<mx:method name="getCategoryResult" result="getSearchQuery_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+ 	<mx:RemoteObject
+		id="referenceManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_application.applicationResources">
+		<mx:method name="programLookup" result="programLookup_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+
+	<mx:RemoteObject
+		id="subdataManager"
+		showBusyCursor="true"
+		destination="ColdFusion" source="appmanage.cfcs.mvc.Address">
+		<mx:method name="getSubQuery" result="getSubQuery_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+
+	<mx:HBox includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}" id="addEditDeleteToolbar1">
+		<mx:Spacer width="100%"/>
+	</mx:HBox>
+	<mx:HBox width="60%">
+		<mx:DataGrid
+			id="subList" 
+			
+			doubleClickEnabled="{User.getInstance().admin}"
+			doubleClick="this.currentIndex=this.subList.selectedIndex; if(this.masterList.selectedItem!=null) { WindowManager.add( getSubDetailComponent(this.subList.selectedItem.id), this, false ); }"   
+			width="100%" height="0">
+			<mx:columns>
+				<mx:DataGridColumn dataField="email" headerText="Email" width="60"/>	
+				<mx:DataGridColumn dataField="address1" headerText="Address1" width="135"/>
+				<mx:DataGridColumn dataField="address2" headerText="Address2" width="135"/>
+				<mx:DataGridColumn dataField="city" headerText="City" width="50"/>	
+				<mx:DataGridColumn dataField="state" headerText="State" width="30"/>
+				<mx:DataGridColumn dataField="zip" headerText="Zip" width="30"/>
+				<mx:DataGridColumn dataField="country" headerText="Country" width="50"/>	
+				<mx:DataGridColumn dataField="phone" headerText="Phone" width="150"/>		
+			</mx:columns>
+		</mx:DataGrid>
+	</mx:HBox>
+	<mx:HBox width="100%" height="482">
+		<mx:Box width="588" height="476">		
+		<mx:HBox  id="addEditDeleteToolbar">
+			<mx:Spacer width="100%"/>
+			<mx:HBox  includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}"  width="100%" id="editbar">
+				<mx:Button id="addBtn"
+					icon="@Embed(source='../../../../images/add.png')" width="40"
+					click="WindowManager.add( getDetailComponent(null), this, false );" />
+				<mx:Button id="editBtn"
+					icon="@Embed(source='../../../../images/edit.png')" width="40"
+					enabled="{this.masterList.selectedIndex>=0}"
+					click="WindowManager.add( getDetailComponent(this.masterList.selectedItem.id), this, false );" />
+				<mx:Button id="deleteBtn"
+					icon="@Embed(source='../../../../images/delete.png')" width="40"
+					enabled="{this.masterList.selectedIndex>=0}"
+					click='Alert.show("Are you sure you want to delete this?", "Confirm Deletion", Alert.YES | Alert.NO, this, deleteMe, null, Alert.CANCEL);' />
+			
+			<mx:Label text="    Search " fontWeight="bold" fontSize="12"/>
+			<mx:TextInput borderStyle="solid" width="123" id="keyword" change="search(this.keyword.text)"/>
+			<mx:LinkButton label="Clear" click="this.keyword.text=&quot;&quot;;refreshList(null);"/>
+			<cfComponents:BindableComboBox 
+				 id="progcode"				 
+				 valueField="id"
+				 labelFields="[program]"
+				 width="100%"				 
+				 change="category(this.progcode.selectedItem.program);this.subList.selectedItem=''"
+				 prompt="-Select-"
+				 />
+		</mx:HBox>
+		</mx:HBox>
+		<mx:HBox width="100%" height="100%"> 
+			<mx:DataGrid 
+				id="masterList" 
+				click="refreshSublist(null)"			
+				doubleClickEnabled="{User.getInstance().admin}"
+				doubleClick="this.currentIndex=this.masterList.selectedIndex; if(this.masterList.selectedItem!=null) { WindowManager.add( getDetailComponent(this.masterList.selectedItem.id), this, false ); }"   
+				width="100%" height="100%" top="0" left="0" right="0" bottom="0">
+				<mx:columns>
+					<mx:DataGridColumn dataField="pid" headerText="PID" width="35"/>
+					<mx:DataGridColumn dataField="fname" headerText="First Name" width="75"/>
+					<mx:DataGridColumn dataField="lname" headerText="Last Name" width="75"/>
+					<mx:DataGridColumn dataField="gender"  headerText="Gender" width="30"/>
+				</mx:columns>
+			</mx:DataGrid>
+		</mx:HBox>
+		</mx:Box>
+		<mx:HBox width="63.93939" height="20">
+		</mx:HBox>
+		<mx:VBox height="100%">
+		<mx:HBox height="20">			
+		</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="PID" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.masterList.selectedItem.pid}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="Name" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="215" text="{this.masterList.selectedItem.fname} {this.masterList.selectedItem.lname}"/>				
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="90">
+							<mx:Label text="Gender" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.masterList.selectedItem.gender}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="Email" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.subList.selectedItem.email}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="Address1" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.subList.selectedItem.address1}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="90">
+							<mx:Label text="Address2" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.subList.selectedItem.address2}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="City" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.subList.selectedItem.city}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="State" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.subList.selectedItem.state}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="Zip" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.subList.selectedItem.zip}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="Country" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.subList.selectedItem.country}"/>
+			</mx:HBox>
+			<mx:HBox width="400" borderStyle="solid" fontSize="15">
+					<mx:HBox width="89">
+							<mx:Label text="Phone" fontWeight="bold"/>
+					</mx:HBox>
+					<mx:Text width="211" text="{this.subList.selectedItem.phone}"/>
+			</mx:HBox>				
+			<mx:HBox  includeInLayout="{User.getInstance().admin}" visible="{User.getInstance().admin}"  width="480.07578" height="31">
+						<mx:Button id="editBtn1"
+							icon="@Embed(source='../../../../images/edit.png')" width="40"
+							enabled="{this.masterList.selectedIndex>=0}"
+							click="WindowManager.add( getSubDetailComponent(this.subList.selectedItem.id), this, false );"/>
+						<mx:Button id="deleteBtn1"
+							icon="@Embed(source='../../../../images/delete.png')" width="40"
+							enabled="{this.subList.selectedIndex>=0}"
+							click='Alert.show("Are you sure you want to delete this?", "Confirm Deletion", Alert.YES | Alert.NO, this, deleteMe2, null, Alert.CANCEL);'/>
+			</mx:HBox>
+		</mx:VBox>
+	</mx:HBox>
+		
+
+</cfComponents:SizeableTitleWindow>
+

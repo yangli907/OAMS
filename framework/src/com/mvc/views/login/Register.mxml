@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*" 
+	currentState="step1" 
+	width="100%" height="100%" 
+	creationComplete="initApp()">
+
+    <mx:Metadata>
+       [Event("finishRegistration")] 
+       [Event("registrationSuccessful")] 
+    </mx:Metadata>
+
+    <mx:Script>
+        <![CDATA[
+        	import mx.events.ValidationResultEvent;
+            import mx.rpc.events.ResultEvent;
+            import mx.rpc.events.FaultEvent;
+            import mx.utils.ObjectUtil;
+            import mx.controls.Alert;
+
+			private function initApp():void
+			{
+
+			}
+
+			// do form validation, before we send the data to the server.
+			private function isValid():Boolean
+            {
+            	var error:Boolean = false;
+            	var v1:ValidationResultEvent = this.firstnameValidator.validate(this.firstname.text);
+            	var v2:ValidationResultEvent = this.lastnameValidator.validate(this.lastname.text);
+            	var v3:ValidationResultEvent = this.emailValidator.validate(this.email.text);
+            	
+            	
+            	this.errorMsg.text = ""; //reset for each pass through the validation.
+            	this.errorMsg.height = 0;
+            	if( v1.type!=ValidationResultEvent.VALID )
+            	{
+					this.errorMsg.text += "Invalid First Name\n";
+					this.errorMsg.height += 15;            			
+					error = true;
+            	}
+            	if( v2.type!=ValidationResultEvent.VALID )
+            	{
+					this.errorMsg.text += "Invalid Last Name\n";
+					this.errorMsg.height += 15;            		            		
+					error = true;
+            	}
+            	if( v3.type!=ValidationResultEvent.VALID )
+            	{
+					this.errorMsg.text += "Invalid Email\n";
+					this.errorMsg.height += 15;            		            		
+					error = true;
+            	}
+            	if( this.password.text != this.confirmPassword.text )
+            	{
+					this.errorMsg.text += "The Password and Confirm Password fields don't match.\n";
+					this.errorMsg.height += 15;            		            		
+					error = true;
+            	}            	
+            	if( !error )
+            	{
+            		return true;	            	
+            	}
+            	else
+            	{
+            		return false;
+            	}
+            }				
+			
+
+			// register the new troop.
+            private function registerUser():void
+            {
+            	if( isValid() )
+            	{
+	                authManager.register(this.registeredUser); 
+             	}
+            } 
+   
+            // display and format any server side error messages.
+            private function serverFault(event:FaultEvent):void
+            {
+				//Alert.show( ObjectUtil.toString(event.message) );
+                this.errorMsg.text = event.message['message'];
+                this.errorMsg.height = 15;
+                this.errorMsg.visible = true;
+            }           
+            
+            
+            // the user is registered, now let's login the new user.
+            private function register_result(event:ResultEvent):void
+            {
+			    this.authManager.login( this.email.text, this.password.text );                
+            }
+            
+            // login was successful, throw the right event.
+            private function login_result(event:ResultEvent):void
+            {
+            	// The user is registered and has been successfully logged in. 
+            	// Now we will tell the loginControlled this fact, so it can enter 
+            	// the application.
+			    this.dispatchEvent( new Event('registrationSuccessful') );
+            }
+        
+        ]]>
+    </mx:Script>    
+
+    <mx:RemoteObject 
+        id="authManager" 
+        destination="ColdFusion" 
+        source="framework.cfcs.mvc.managers.Auth">
+       <mx:method name="login" result="login_result(event)" fault="serverFault(event)" />
+       <mx:method name="register" result="register_result(event)" fault="serverFault(event)" />
+    </mx:RemoteObject>  
+
+    
+            
+    <mx:StringValidator 
+    	id="firstnameValidator" 
+    	source="{this.firstname}" 
+    	property="text" 
+    	required="true" />
+    <mx:StringValidator 
+    	id="lastnameValidator" 
+    	source="{this.lastname}" 
+    	property="text" 
+    	required="true" />
+    <mx:EmailValidator 
+    	id="emailValidator" 
+    	source="{this.email}" 
+    	property="text" 
+    	required="true" />
+    	
+    	
+    <mx:Model id="registeredUser">
+    <root>
+    	<firstname>{this.firstname.text}</firstname>
+    	<email>{this.email.text}</email>
+    	<password>{this.password.text}</password>
+    	<confirmPassword>{this.confirmPassword.text}</confirmPassword>
+    </root>
+    </mx:Model>
+
+    <mx:states>
+        <mx:State name="step1">
+            <mx:AddChild position="lastChild">
+
+                <mx:HBox width="100%" height="100%">
+				    <mx:VBox width="100%" height="100%">
+
+					    <mx:Text width="100%" height="20" 
+					    	text="Instructions: Lorem ipsum dolor sit amet, consectetuer adipiscing elit. " />
+					    
+					    <mx:Text id="errorMsg" visible="true" 
+					        color="red" width="100%" height="0" />
+
+					    <mx:Form>
+						    <mx:FormItem label="First Name" required="true">
+						        <mx:TextInput id="firstname"/>
+						    </mx:FormItem>
+						    <mx:FormItem label="Last Name" required="true">
+						        <mx:TextInput id="lastname"/>
+						    </mx:FormItem>
+						    <mx:FormItem label="Email" required="true">
+						        <mx:TextInput id="email"/>
+						    </mx:FormItem>
+						    <mx:FormItem label="Password" required="true">
+						        <mx:TextInput id="password" displayAsPassword="true" />
+						    </mx:FormItem>
+						    <mx:FormItem label="Confirm Password" required="true">
+						        <mx:TextInput id="confirmPassword" displayAsPassword="true" /> 
+						    </mx:FormItem>
+						    <mx:FormItem>
+						    	<mx:Button id="register" label="Register" click="registerUser()" />
+						    </mx:FormItem>
+					    </mx:Form>
+				    </mx:VBox>
+
+                </mx:HBox>
+                
+            </mx:AddChild>
+        </mx:State>
+
+        
+        <mx:State name="finish">
+            <mx:AddChild position="lastChild">
+           
+                <mx:VBox width="100%" height="100%" verticalAlign="middle" horizontalAlign="center" >
+			        <mx:Text width="50%" text="Registration Successful" />
+			        <mx:Text width="50%" 
+			        	text="Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Nulla vehicula malesuada justo. Duis elementum tristique risus. Nam porta. Nulla facilisi. Aliquam fermentum purus sed eros. Vivamus eu mauris. Donec et mi accumsan purus lacinia imperdiet. Nulla blandit posuere tortor. Pellentesque tincidunt. Integer lorem. Aenean eu nisl. Vestibulum ut purus. Aenean hendrerit sollicitudin lectus. Nullam ut tortor." />
+			        
+			        <mx:LinkButton label="Enter" 
+			            click="this.dispatchEvent( new Event('finishRegistration') )" 
+			            width="100" />
+			    </mx:VBox>
+
+            </mx:AddChild>            
+        </mx:State>
+    </mx:states>
+    
+</mx:HBox>

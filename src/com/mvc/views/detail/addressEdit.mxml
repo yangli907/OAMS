@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfComponents:SizeableTitleWindow xmlns:mx="http://www.adobe.com/2006/mxml" xmlns="*"
+	xmlns:cfComponents="com.adobe.ColdFusion.components.*"
+	xmlns:cfDataGrid="com.adobe.ColdFusion.components.datagrid.*"
+	xmlns:model="com.mvc.models.*"
+	xmlns:validation="com.adobe.ColdFusion.validation.*"
+	xmlns:customValidation="com.mvc.validation.*"
+	creationComplete="initComponent()"
+	explicitMaxHeight="{Application.application.height - 50}" 
+	title="Edit - Student Address"
+	showCloseButton="true"
+	close="WindowManager.remove(this);"  height="488" width="478">
+
+ 
+	<mx:Metadata>
+		[Event("change")]
+	</mx:Metadata> 
+
+	<mx:Script> 
+		<![CDATA[
+			import mx.utils.ObjectUtil;
+			import mx.controls.Alert;
+			import mx.core.Application;
+			import mx.validators.Validator;
+			import com.adobe.windowedApplication.managers.WindowManager;
+			import mx.rpc.events.ResultEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.FaultEvent;
+			import com.mvc.models.*;
+
+			private var _key:Object;
+			private var ctry:Object;
+			
+			public function get key():Object
+			{
+				return this._key;
+			}
+
+			public function set key(key:Object):void
+			{
+				this._key = key;
+				getItem();
+			}
+
+			private function initComponent():void
+			{
+				getItem();
+				this.referenceManager.ctryLookup();
+			}
+
+
+			/**********************************************
+			 * Remote Server Calls and Call back handlers
+			 **********************************************/
+
+			// get an instance of the item from the server
+			public function getItem():void
+			{
+				if( this._key != null )
+				{
+					this.dataManager.getById(this._key);
+				}
+				else 
+				{
+					// the key is null, so we'll create a new object for the 'add' operation. 
+					this.detailObject = new Edit_address();
+					//this.detailObject.sgrp = User.getInstance().sel_sg;
+				}
+			}
+
+			// save the edited object back on the server.
+			// and then throw a change event, so the master page
+			// can update itself accordingly
+			private function saveItem(item:Object):void
+			{
+				
+				// array of validators to check before form is submitted
+				var validators:Array = [];
+				validators[0] = this.v0;
+				validators[1] = this.v1;
+				var inValidResults:Array = Validator.validateAll(validators);
+
+				if( inValidResults.length == 0 )
+				{
+					this.dataManager.save(item);
+				}
+			}
+
+			private function server_fault(event:FaultEvent):void
+			{
+				Alert.show( ObjectUtil.toString(event.fault) );
+			}
+
+			private function get_result(event:ResultEvent):void
+			{
+				var detail:Edit_address = event.result as Edit_address;
+				ctry = detail.country;
+				this.detailObject = detail;
+								
+			}
+
+			private function save_result(event:ResultEvent):void
+			{
+				this.dispatchEvent( new Event("change") );
+				WindowManager.remove(this);
+			}
+
+			private function ctryLookup_result(event:ResultEvent):void
+			{
+				this.country.dataProvider = event.result;
+				this.country.selectedItem = ctry;
+			}
+		]]>
+	</mx:Script>
+
+	<mx:RemoteObject
+		id="dataManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_address.addressGateway">
+		<mx:method name="getById" result="get_result(event)" fault="server_fault(event)" />
+		<mx:method name="save" result="save_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+ 
+ 	<mx:RemoteObject
+		id="referenceManager"
+		showBusyCursor="true"
+		destination="ColdFusion"
+		source="appmanage.cfcs.mvc.Edit_address.addressResources">
+		<mx:method name="ctryLookup" result="ctryLookup_result(event)" fault="server_fault(event)" />
+	</mx:RemoteObject>
+	
+<!-- create a model, using the AS Value Object class. With this mxml version of the model we can bind the form fields back to the object. --> 
+	<model:Edit_address id="detailObject">
+		<model:address1>{address1.text as String}</model:address1>
+		<model:address2>{address2.text as String}</model:address2>
+		<model:phone>{phone.text as String}</model:phone>
+		<model:email>{email.text as String}</model:email>
+		<model:city>{city.text as String}</model:city>
+		<model:state>{state.text as String}</model:state>
+		<model:zip>{zip.text as String}</model:zip>
+		<model:country>{country.selectedItem.name as String}</model:country>
+
+	</model:Edit_address>
+
+	<mx:Validator id="v0" source="{this.phone}" property="text" required="true" />
+	<mx:Validator id="v1" source="{this.address1}" property="text" required="true" />
+	<mx:Form width="100%" height="100%">
+		<mx:FormItem width="100%" label="Phone" required="true">
+			<cfComponents:TextInputMask
+				 id="phone"
+				 text="{this.detailObject.phone}" 
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Email" required="true">
+			<cfComponents:TextInputMask
+				 id="email"
+				 text="{this.detailObject.email}" 
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Address1" required="true">
+			<cfComponents:TextInputMask
+				 id="address1"
+				 text="{this.detailObject.address1}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Address2">
+			<cfComponents:TextInputMask
+				 id="address2"
+				 text="{this.detailObject.address2}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="City" required="true">
+			<cfComponents:TextInputMask
+				 id="city"
+				 text="{this.detailObject.city}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="State" required="true">
+			<cfComponents:TextInputMask
+				 id="state"
+				 text="{this.detailObject.state}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem width="100%" label="Zip code" required="true">
+			<cfComponents:TextInputMask
+				 id="zip"
+				 text="{this.detailObject.zip}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+		<mx:FormItem label="Country">
+			<cfComponents:BindableComboBox 
+				 id="country"				 
+				 valueField="name"
+				 labelFields="[name]"
+				 width="100%"
+				 selectedItem="US"
+				 
+				 />
+		</mx:FormItem>
+
+		<mx:FormItem width="100%" label="SID" required="true">
+			<cfComponents:TextInputMask
+				 id="sid"
+				 text="{this.detailObject.sid}"
+				 width="100%"
+				 />
+		</mx:FormItem>
+	</mx:Form>
+
+	<mx:ControlBar horizontalAlign="right" width="100%">
+		<mx:Button id="saveBtn" label="Save" click="saveItem(this.detailObject)" />
+		<mx:Button id="cancelBtn" label="Cancel" click="WindowManager.remove(this);" />
+	</mx:ControlBar>
+</cfComponents:SizeableTitleWindow>
